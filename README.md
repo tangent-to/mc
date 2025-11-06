@@ -356,10 +356,10 @@ JSMC leverages TensorFlow.js for:
 |---------|------|------|
 | Language | Python | JavaScript |
 | Backend | Aesara/JAX | TensorFlow.js |
-| DAG Structure | ✓ | ✓ |
+| DAG Structure | Yes | Yes |
 | MCMC Samplers | NUTS, HMC, MH | HMC, MH |
-| Variational Inference | ✓ | Planned |
-| GPU Support | ✓ | ✓ (via TF.js) |
+| Variational Inference | Yes | Planned |
+| GPU Support | Yes | Yes (via TF.js) |
 
 ## Performance Tips
 

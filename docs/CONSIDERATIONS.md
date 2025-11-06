@@ -29,14 +29,14 @@ The trade-off is worth it for the performance and reliability TensorFlow.js prov
 |---------|------|------|-------|
 | Language | Python | JavaScript | JSMC brings Bayesian inference to JS ecosystem |
 | Backend | Aesara/JAX | TensorFlow.js | Both support autodiff |
-| DAG Structure | ✓ | ✓ | Core feature for both |
+| DAG Structure | Yes | Yes | Core feature for both |
 | MCMC Samplers | NUTS, HMC, MH, etc. | HMC, MH | JSMC has fewer samplers currently |
-| Variational Inference | ✓ | ⚠️ Planned | Major feature gap |
-| Model Comparison | WAIC, LOO | ⚠️ Planned | Important for model selection |
+| Variational Inference | Yes | Planned | Major feature gap |
+| Model Comparison | WAIC, LOO | Planned | Important for model selection |
 | Visualization | ArviZ | External tools | Observable, D3.js recommended |
 | Performance | High (JAX/C++) | Medium (JS/WASM) | ~2-5x slower typically |
-| Browser Support | ✗ | ✓ | JSMC's key advantage |
-| Gaussian Processes | ✓ | ✓ | Both support GPs |
+| Browser Support | No | Yes | JSMC's key advantage |
+| Gaussian Processes | Yes | Yes | Both support GPs |
 
 ## Performance Considerations
 
