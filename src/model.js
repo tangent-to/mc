@@ -141,6 +141,84 @@ export class Model {
   }
 
   /**
+   * Posterior predictive sampling
+   * Generate predictions by sampling from the posterior
+   * @param {Object} trace - Trace object from MCMC sampling
+   * @param {Function} predictFn - Function that takes params and returns predictions
+   * @param {number} nSamples - Number of posterior samples to use (null = use all)
+   * @returns {Array} Array of predictions from each posterior sample
+   */
+  predictPosterior(trace, predictFn, nSamples = null) {
+    const traceData = trace.trace || trace;
+    const nTraces = traceData[Object.keys(traceData)[0]].length;
+    const nToUse = nSamples === null ? nTraces : Math.min(nSamples, nTraces);
+
+    const predictions = [];
+
+    for (let i = 0; i < nToUse; i++) {
+      // Extract parameters for this sample
+      const params = {};
+      for (const [name, samples] of Object.entries(traceData)) {
+        params[name] = samples[i];
+      }
+
+      // Generate prediction
+      const pred = predictFn(params);
+      predictions.push(pred);
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Compute posterior predictive mean and credible intervals
+   * @param {Object} trace - Trace object from MCMC sampling
+   * @param {Function} predictFn - Function that takes params and returns predictions
+   * @param {number} credibleInterval - Credible interval (e.g., 0.95 for 95%)
+   * @returns {Object} {mean, lower, upper} predictions
+   */
+  predictPosteriorSummary(trace, predictFn, credibleInterval = 0.95) {
+    const predictions = this.predictPosterior(trace, predictFn);
+
+    // Assume predictions are arrays of numbers or single numbers
+    const isArray = Array.isArray(predictions[0]);
+
+    if (!isArray) {
+      // Single value predictions
+      const sorted = [...predictions].sort((a, b) => a - b);
+      const n = sorted.length;
+      const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
+      const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+
+      return {
+        mean: predictions.reduce((a, b) => a + b, 0) / n,
+        lower: sorted[lowerIdx],
+        upper: sorted[upperIdx]
+      };
+    } else {
+      // Array predictions - compute element-wise statistics
+      const nPoints = predictions[0].length;
+      const mean = new Array(nPoints).fill(0);
+      const lower = new Array(nPoints);
+      const upper = new Array(nPoints);
+
+      for (let i = 0; i < nPoints; i++) {
+        const values = predictions.map(p => p[i]);
+        const sorted = [...values].sort((a, b) => a - b);
+        const n = sorted.length;
+        const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
+        const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+
+        mean[i] = values.reduce((a, b) => a + b, 0) / n;
+        lower[i] = sorted[lowerIdx];
+        upper[i] = sorted[upperIdx];
+      }
+
+      return { mean, lower, upper };
+    }
+  }
+
+  /**
    * Create a summary of the model
    * @returns {string} Model summary
    */

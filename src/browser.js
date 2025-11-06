@@ -1,4 +1,15 @@
-// Main exports for JSMC library
+/**
+ * Browser-compatible build of JSMC
+ * Uses TensorFlow.js instead of tfjs-node
+ * Excludes Node.js-specific features (fs operations)
+ */
+
+import * as tf from '@tensorflow/tfjs';
+
+// Re-export TensorFlow for use in browser
+export { tf };
+
+// Export main classes (need to be browser-compatible versions)
 export { Model } from './model.js';
 
 // Distributions
@@ -12,7 +23,7 @@ export {
   GaussianProcess
 } from './distributions/index.js';
 
-// Kernels for Gaussian Processes
+// Kernels
 export {
   RBF,
   Matern32,
@@ -27,7 +38,7 @@ export {
   HamiltonianMC
 } from './samplers/index.js';
 
-// Utilities
+// Utilities (trace analysis only, no file I/O)
 export {
   summarize,
   effectiveSampleSize,
@@ -37,14 +48,8 @@ export {
   traceToCSV
 } from './utils/trace.js';
 
-// Persistence utilities
+// Browser-compatible persistence
 export {
-  saveTrace,
-  loadTrace,
-  saveModelConfig,
-  saveModelState,
-  loadModelState,
-  saveTraceCSV,
   exportTraceForBrowser,
   importTraceFromJSON
 } from './utils/persistence.js';
