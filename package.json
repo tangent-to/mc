@@ -1,0 +1,44 @@
+{
+  "name": "jsmc",
+  "version": "0.1.0",
+  "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "example": "node examples/linear_regression.js",
+    "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js"
+  },
+  "keywords": [
+    "bayesian",
+    "mcmc",
+    "probabilistic-programming",
+    "statistics",
+    "inference",
+    "pymc",
+    "bayesian-inference",
+    "machine-learning",
+    "tensorflow"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.21.0",
+    "@tensorflow/tfjs-node": "^4.21.0",
+    "jstat": "^1.9.6"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/essicolo/jsmc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/essicolo/jsmc/issues"
+  },
+  "homepage": "https://github.com/essicolo/jsmc#readme"
+}
