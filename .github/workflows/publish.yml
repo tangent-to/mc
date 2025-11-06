@@ -1,0 +1,71 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (leave empty to use package.json version)'
+        required: false
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update version if specified
+        if: github.event.inputs.version != ''
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Run tests
+        run: npm run test:pymc
+        env:
+          TF_ENABLE_ONEDNN_OPTS: 0
+
+      - name: Generate documentation
+        run: npm run docs:generate
+
+      - name: Verify package name
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          if [ "$PACKAGE_NAME" != "@tangent.to/mc" ]; then
+            echo "Error: Package name is not @tangent.to/mc"
+            exit 1
+          fi
+          echo "Package name verified: $PACKAGE_NAME"
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create publish summary
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "## Published @tangent.to/mc@$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package published to: https://www.npmjs.com/package/@tangent.to/mc" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm install @tangent.to/mc" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

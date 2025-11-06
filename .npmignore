@@ -1,0 +1,53 @@
+# Test files
+tests/
+*.test.js
+
+# Examples (keep them - users might want to see them)
+# examples/
+
+# Development files
+.github/
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# CI/CD
+.travis.yml
+.circleci/
+azure-pipelines.yml
+
+# Scripts (keep generate-docs for users)
+# scripts/
+
+# Documentation source (keep docs/ - users want this)
+# docs/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/

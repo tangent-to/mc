@@ -1,5 +1,5 @@
 {
-  "name": "jsmc",
+  "name": "@tangent.to/mc",
   "version": "0.2.0",
   "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
   "main": "src/index.js",
@@ -19,7 +19,8 @@
     "example:gp": "node examples/gaussian_process.js",
     "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js && node examples/gaussian_process.js",
     "docs:generate": "node scripts/generate-docs.js",
-    "docs:serve": "node scripts/serve-docs.js"
+    "docs:serve": "node scripts/serve-docs.js",
+    "prepublishOnly": "npm run test:pymc && npm run docs:generate"
   },
   "keywords": [
     "bayesian",
@@ -34,9 +35,10 @@
     "gaussian-process",
     "gp",
     "browser",
-    "observable"
+    "observable",
+    "tangent.to"
   ],
-  "author": "",
+  "author": "tangent-to",
   "license": "Apache-2.0",
   "dependencies": {
     "@tensorflow/tfjs": "^4.21.0",
@@ -52,10 +54,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/essicolo/jsmc.git"
+    "url": "https://github.com/tangent-to/mc.git"
   },
   "bugs": {
-    "url": "https://github.com/essicolo/jsmc/issues"
+    "url": "https://github.com/tangent-to/mc/issues"
   },
-  "homepage": "https://github.com/essicolo/jsmc#readme"
+  "homepage": "https://github.com/tangent-to/mc#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }

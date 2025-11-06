@@ -1,10 +1,10 @@
-# JSMC - JavaScript Markov Chain Monte Carlo
+# @tangent.to/mc - JavaScript Markov Chain Monte Carlo
 
 A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript. Built on TensorFlow.js with automatic differentiation support for efficient MCMC sampling.
 
 ## Overview
 
-JSMC brings the power of Bayesian statistical modeling to JavaScript, providing an intuitive API similar to PyMC for defining probabilistic models as Directed Acyclic Graphs (DAGs) and performing inference using Markov Chain Monte Carlo methods.
+MC brings the power of Bayesian statistical modeling to JavaScript, providing an intuitive API similar to PyMC for defining probabilistic models as Directed Acyclic Graphs (DAGs) and performing inference using Markov Chain Monte Carlo methods.
 
 ### Key Features
 
@@ -21,8 +21,22 @@ JSMC brings the power of Bayesian statistical modeling to JavaScript, providing 
 
 ## Installation
 
+### Node.js / npm
+
 ```bash
-npm install jsmc
+npm install @tangent.to/mc
+```
+
+### Deno
+
+```typescript
+import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
+```
+
+### Observable
+
+```javascript
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
 ```
 
 Or add to your `package.json`:
@@ -30,7 +44,7 @@ Or add to your `package.json`:
 ```json
 {
   "dependencies": {
-    "jsmc": "^0.1.0"
+    "@tangent.to/mc": "^0.2.0"
   }
 }
 ```
@@ -40,7 +54,7 @@ Or add to your `package.json`:
 Here's a simple Bayesian linear regression example:
 
 ```javascript
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from 'jsmc';
+import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
 
 // Create model
 const model = new Model('linear_regression');
@@ -122,7 +136,7 @@ All distributions support:
 JSMC includes a full implementation of Gaussian Processes for non-parametric regression:
 
 ```javascript
-import { GaussianProcess, RBF, Matern32 } from 'jsmc';
+import { GaussianProcess, RBF, Matern32 } from '@tangent.to/mc';
 
 // Create GP with RBF kernel
 const kernel = new RBF(lengthscale=1.0, variance=1.0);
@@ -170,7 +184,7 @@ const predictions = model.predictPosteriorSummary(
 Save and load model states and traces:
 
 ```javascript
-import { saveTrace, loadTrace, saveModelState } from 'jsmc';
+import { saveTrace, loadTrace, saveModelState } from '@tangent.to/mc';
 
 // Save trace to JSON
 saveTrace(trace, 'trace.json');
@@ -224,7 +238,7 @@ const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
 JSMC provides utilities for analyzing MCMC samples:
 
 ```javascript
-import { summarize, effectiveSampleSize, gelmanRubin, printSummary } from 'jsmc';
+import { summarize, effectiveSampleSize, gelmanRubin, printSummary } from '@tangent.to/mc';
 
 // Print comprehensive summary
 printSummary(trace);
@@ -380,7 +394,7 @@ JSMC leverages TensorFlow.js for:
 
 ```bash
 # Clone repository
-git clone https://github.com/essicolo/jsmc.git
+git clone https://github.com/tangent-to/mc.git
 cd jsmc
 
 # Install dependencies
@@ -441,6 +455,6 @@ If you use JSMC in your research, please cite:
   title = {JSMC: JavaScript Markov Chain Monte Carlo},
   author = {},
   year = {2025},
-  url = {https://github.com/essicolo/jsmc}
+  url = {https://github.com/tangent-to/mc}
 }
 ```
