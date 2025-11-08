@@ -35,7 +35,7 @@ export class Beta extends Distribution {
       // Log beta function: log(B(α, β)) = log(Γ(α)) + log(Γ(β)) - log(Γ(α + β))
       const alphaVal = this.alpha.arraySync();
       const betaVal = this.beta.arraySync();
-      const logBetaFunc = Math.log(jstat.beta(alphaVal, betaVal));
+      const logBetaFunc = Math.log(jstat.betafn(alphaVal, betaVal));
 
       const logKernel = tf.add(
         tf.mul(tf.sub(this.alpha, 1), logX),

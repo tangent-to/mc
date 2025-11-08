@@ -89,12 +89,10 @@ export class Model {
   logProbAndGradient(params) {
     // Convert params to tf.Variables for gradient computation
     const tfParams = {};
-    const tfParamIds = {}; // Map names to tensor IDs
     const paramNames = Object.keys(params);
 
     for (const name of paramNames) {
       tfParams[name] = tf.variable(params[name]);
-      tfParamIds[name] = tfParams[name].id;
     }
 
     let logProbValue;
@@ -107,15 +105,19 @@ export class Model {
     });
 
     // Extract gradient values and map back to variable names
-    for (const name of paramNames) {
-      const tensorId = tfParamIds[name];
-      if (grads.grads[tensorId]) {
-        gradients[name] = grads.grads[tensorId];
+    // variableGrads returns gradients as an object keyed by variable
+    // We need to iterate through and match them to parameter names
+    const gradValues = Object.values(grads.grads);
+    const gradKeys = Object.keys(grads.grads);
+
+    paramNames.forEach((name, idx) => {
+      if (idx < gradValues.length) {
+        gradients[name] = gradValues[idx];
       } else {
         // If no gradient, create zero gradient
         gradients[name] = tf.zeros(tfParams[name].shape);
       }
-    }
+    });
 
     // Clean up variables
     for (const name of paramNames) {
@@ -208,8 +210,10 @@ export class Model {
       // Single value predictions
       const sorted = [...predictions].sort((a, b) => a - b);
       const n = sorted.length;
-      const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
-      const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+      const lowerPercentile = (1 - credibleInterval) / 2;
+      const upperPercentile = 1 - lowerPercentile;
+      const lowerIdx = Math.floor(n * lowerPercentile);
+      const upperIdx = Math.min(Math.floor(n * upperPercentile), n - 1);
 
       return {
         mean: predictions.reduce((a, b) => a + b, 0) / n,
@@ -227,8 +231,10 @@ export class Model {
         const values = predictions.map(p => p[i]);
         const sorted = [...values].sort((a, b) => a - b);
         const n = sorted.length;
-        const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
-        const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+        const lowerPercentile = (1 - credibleInterval) / 2;
+        const upperPercentile = 1 - lowerPercentile;
+        const lowerIdx = Math.floor(n * lowerPercentile);
+        const upperIdx = Math.min(Math.floor(n * upperPercentile), n - 1);
 
         mean[i] = values.reduce((a, b) => a + b, 0) / n;
         lower[i] = sorted[lowerIdx];
