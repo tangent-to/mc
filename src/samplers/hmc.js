@@ -2,7 +2,22 @@ import * as tf from '@tensorflow/tfjs-node';
 
 /**
  * Hamiltonian Monte Carlo (HMC) sampler
- * Uses gradient information for efficient exploration of the posterior
+ *
+ * Uses gradient information for efficient exploration of the posterior.
+ * HMC simulates Hamiltonian dynamics to propose distant states with high acceptance probability.
+ *
+ * **Hamiltonian**:
+ * $$
+ * H(\theta, p) = -\log p(\theta|y) + \frac{1}{2}p^T p
+ * $$
+ * where $\theta$ is position (parameters), $p$ is momentum.
+ *
+ * **Leapfrog integrator** preserves volume and is reversible:
+ * 1. Half-step momentum: $p_{i+1/2} = p_i + \frac{\epsilon}{2}\nabla_\theta \log p(\theta_i|y)$
+ * 2. Full-step position: $\theta_{i+1} = \theta_i + \epsilon p_{i+1/2}$
+ * 3. Half-step momentum: $p_{i+1} = p_{i+1/2} + \frac{\epsilon}{2}\nabla_\theta \log p(\theta_{i+1}|y)$
+ *
+ * @see {@link https://arxiv.org/abs/1701.02434|A Conceptual Introduction to HMC}
  */
 export class HamiltonianMC {
   /**

@@ -1,0 +1,38 @@
+title: "@tangent.to/mc Documentation"
+description: "JavaScript Markov Chain Monte Carlo - PyMC-inspired Bayesian inference for JavaScript"
+baseurl: "/mc"
+url: "https://tangent-to.github.io"
+
+theme: jekyll-theme-cayman
+
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
+  input: GFM
+  syntax_highlighter: rouge
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+collections:
+  api:
+    output: true
+    permalink: /api/:name
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+  - scope:
+      path: "api"
+    values:
+      layout: api
+
+exclude:
+  - node_modules
+  - package.json
+  - package-lock.json
+  - scripts
+  - "*.log"

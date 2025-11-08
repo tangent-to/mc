@@ -1,8 +1,23 @@
 import * as tf from '@tensorflow/tfjs-node';
 
 /**
- * Model class for defining Bayesian probabilistic models.
- * Similar to PyMC's Model context manager.
+ * Model class for defining Bayesian probabilistic models
+ *
+ * Similar to PyMC's Model context manager, this class represents a probabilistic model
+ * as a Directed Acyclic Graph (DAG) of random variables.
+ *
+ * **Joint probability**:
+ * $$
+ * p(\theta, y) = p(y|\theta)p(\theta)
+ * $$
+ * where $\theta$ are parameters (latent variables) and $y$ is observed data.
+ *
+ * **Posterior** (via Bayes' theorem):
+ * $$
+ * p(\theta|y) = \frac{p(y|\theta)p(\theta)}{p(y)} \propto p(y|\theta)p(\theta)
+ * $$
+ *
+ * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
 export class Model {
   constructor(name = 'model') {

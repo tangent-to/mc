@@ -1,0 +1,27 @@
+{
+  "name": "@tangent-to/mc",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/index.js",
+    "./browser": "./src/browser.js"
+  },
+  "publish": {
+    "exclude": [
+      ".git",
+      ".github",
+      "node_modules",
+      "examples",
+      "tests",
+      "scripts",
+      "docs/api",
+      "*.log",
+      ".npmignore"
+    ],
+    "include": [
+      "src/**/*.js",
+      "README.md",
+      "LICENSE",
+      "CHANGELOG.md"
+    ]
+  }
+}

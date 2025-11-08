@@ -5,11 +5,30 @@ import { RBF } from './kernels.js';
 
 /**
  * Gaussian Process distribution
- * Represents a distribution over functions
+ *
+ * Represents a distribution over functions, defined by a mean function and covariance (kernel) function.
+ *
+ * **Prior**: $f(x) \sim \mathcal{GP}(m(x), k(x, x'))$
+ *
+ * **Posterior** (after observing data $(X, y)$):
+ * $$
+ * f_* | X, y, X_* \sim \mathcal{N}(\mu_*, \Sigma_*)
+ * $$
+ * where:
+ * - $\mu_* = m(X_*) + K(X_*, X)[K(X, X) + \sigma^2I]^{-1}(y - m(X))$
+ * - $\Sigma_* = K(X_*, X_*) - K(X_*, X)[K(X, X) + \sigma^2I]^{-1}K(X, X_*)$
+ *
+ * **Log marginal likelihood**:
+ * $$
+ * \log p(y|X) = -\frac{1}{2}y^T K_y^{-1} y - \frac{1}{2}\log|K_y| - \frac{n}{2}\log(2\pi)
+ * $$
+ * where $K_y = K(X, X) + \sigma^2I$
  *
  * Note: This implementation uses ml-matrix for linear algebra operations
  * that are not available in TensorFlow.js (matrix inversion, Cholesky).
  * TensorFlow.js is used for kernel computations and automatic differentiation.
+ *
+ * @see {@link http://gaussianprocess.org/gpml/|Gaussian Processes for Machine Learning}
  */
 export class GaussianProcess extends Distribution {
   /**
