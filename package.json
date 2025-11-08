@@ -14,13 +14,15 @@
   },
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=tests/.*\\.test\\.js",
     "test:pymc": "node tests/pymc-comparison.js",
+    "test:all": "npm run test:unit && npm run test:pymc",
     "example": "node examples/linear_regression.js",
     "example:gp": "node examples/gaussian_process.js",
     "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js && node examples/gaussian_process.js",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
-    "prepublishOnly": "npm run test:pymc && npm run docs:generate"
+    "prepublishOnly": "npm run test:all && npm run docs:generate"
   },
   "keywords": [
     "bayesian",

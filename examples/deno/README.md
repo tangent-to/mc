@@ -93,13 +93,13 @@ y_i ~ N(mu_group[i], sigma)        # Observations
 
 All examples import from npm registry:
 
-```typescript
+```javascript
 import { Model, Normal, GaussianProcess } from "npm:@tangent.to/mc@0.2.0";
 ```
 
 After JSR publication, you can also use:
 
-```typescript
+```javascript
 import { Model, Normal, GaussianProcess } from "jsr:@tangent-to/mc@0.2.0";
 ```
 

@@ -7,7 +7,7 @@
  * using different kernel functions.
  *
  * To run in Zed: Open this file and use the REPL mode
- * To run from command line: deno run --allow-read --allow-env gaussian_process.ts
+ * To run from command line: deno run --allow-read --allow-env gaussian_process.js
  */
 
 import { GaussianProcess, RBF, Matern32, Periodic } from "npm:@tangent.to/mc@0.2.0";
@@ -17,8 +17,8 @@ console.log("=== Gaussian Process Regression with Deno ===\n");
 // Generate training data from sin function with noise
 console.log("Generating training data from sin(x) + noise...");
 const nTrain = 20;
-const X_train: number[][] = [];
-const y_train: number[] = [];
+const X_train = [];
+const y_train = [];
 
 for (let i = 0; i < nTrain; i++) {
   const x = i * 0.3;
@@ -37,7 +37,7 @@ const gp_rbf = new GaussianProcess(0, rbfKernel, 0.01);
 gp_rbf.fit(X_train, y_train);
 
 // Predictions
-const X_test: number[][] = [];
+const X_test = [];
 for (let i = 0; i < 100; i++) {
   X_test.push([i * 0.06]);
 }

@@ -24,7 +24,8 @@ export {
 // Samplers
 export {
   MetropolisHastings,
-  HamiltonianMC
+  HamiltonianMC,
+  NUTS
 } from './samplers/index.js';
 
 // Utilities

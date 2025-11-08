@@ -7,7 +7,7 @@
  * to perform Bayesian linear regression.
  *
  * To run in Zed: Open this file and use the REPL mode
- * To run from command line: deno run --allow-read --allow-env linear_regression.ts
+ * To run from command line: deno run --allow-read --allow-env linear_regression.js
  */
 
 import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc@0.2.0";
@@ -21,8 +21,8 @@ const trueAlpha = 2.0;
 const trueBeta = 3.0;
 const trueSigma = 0.5;
 
-const x: number[] = [];
-const y: number[] = [];
+const x = [];
+const y = [];
 
 for (let i = 0; i < n; i++) {
   const xi = Math.random() * 10;
@@ -49,7 +49,7 @@ model.addVariable('beta', beta);
 model.addVariable('sigma', sigma);
 
 // Define log probability function (likelihood + priors)
-model.logProb = function(params: any) {
+model.logProb = function(params) {
   let logProb = alpha.logProb(params.alpha)
     .add(beta.logProb(params.beta))
     .add(sigma.logProb(params.sigma));

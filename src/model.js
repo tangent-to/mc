@@ -89,10 +89,12 @@ export class Model {
   logProbAndGradient(params) {
     // Convert params to tf.Variables for gradient computation
     const tfParams = {};
+    const tfParamIds = {}; // Map names to tensor IDs
     const paramNames = Object.keys(params);
 
     for (const name of paramNames) {
       tfParams[name] = tf.variable(params[name]);
+      tfParamIds[name] = tfParams[name].id;
     }
 
     let logProbValue;
@@ -104,10 +106,14 @@ export class Model {
       return logProbValue;
     });
 
-    // Extract gradient values
+    // Extract gradient values and map back to variable names
     for (const name of paramNames) {
-      if (grads.grads[tfParams[name].id]) {
-        gradients[name] = grads.grads[tfParams[name].id];
+      const tensorId = tfParamIds[name];
+      if (grads.grads[tensorId]) {
+        gradients[name] = grads.grads[tensorId];
+      } else {
+        // If no gradient, create zero gradient
+        gradients[name] = tf.zeros(tfParams[name].shape);
       }
     }
 

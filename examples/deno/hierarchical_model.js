@@ -8,7 +8,7 @@
  * to borrow strength across groups.
  *
  * To run in Zed: Open this file and use the REPL mode
- * To run from command line: deno run --allow-read --allow-env hierarchical_model.ts
+ * To run from command line: deno run --allow-read --allow-env hierarchical_model.js
  */
 
 import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc@0.2.0";
@@ -20,9 +20,9 @@ console.log("=== Hierarchical Bayesian Model with Deno ===\n");
 console.log("Generating hierarchical data (3 groups)...");
 
 const groups = [
-  { name: "Group A", trueMean: 10.0, data: [] as number[] },
-  { name: "Group B", trueMean: 12.0, data: [] as number[] },
-  { name: "Group C", trueMean: 11.0, data: [] as number[] }
+  { name: "Group A", trueMean: 10.0, data: [] },
+  { name: "Group B", trueMean: 12.0, data: [] },
+  { name: "Group C", trueMean: 11.0, data: [] }
 ];
 
 const trueGlobalMean = 11.0;
@@ -64,7 +64,7 @@ model.addVariable('mu_c', muC);
 model.addVariable('sigma', sigma);
 
 // Define log probability
-model.logProb = function(params: any) {
+model.logProb = function(params) {
   // Hyperpriors
   let logProb = muGlobal.logProb(params.mu_global)
     .add(sigmaGlobal.logProb(params.sigma_global))
