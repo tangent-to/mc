@@ -26,6 +26,13 @@ export class Gamma extends Distribution {
     return tf.tidy(() => {
       const x = typeof value === 'number' ? tf.scalar(value) : value;
 
+      // Gamma distribution is only defined for x > 0
+      // Return -Infinity for x <= 0
+      const xVal = x.arraySync();
+      if (xVal <= 0) {
+        return tf.scalar(-Infinity);
+      }
+
       // log(p(x)) = α * log(β) + (α - 1) * log(x) - β * x - log(Γ(α))
       const alphaVal = this.alpha.arraySync();
 

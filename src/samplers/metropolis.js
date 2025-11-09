@@ -3,7 +3,19 @@ import jstat from 'jstat';
 
 /**
  * Metropolis-Hastings MCMC sampler
- * A simple but effective MCMC algorithm for sampling from posterior distributions
+ *
+ * A simple but effective MCMC algorithm for sampling from posterior distributions.
+ *
+ * **Algorithm**: At each iteration, a proposal $\theta'$ is generated from a symmetric
+ * proposal distribution $q(\theta'|\theta) = \mathcal{N}(\theta, \sigma^2)$.
+ * The proposal is accepted with probability:
+ * $$
+ * \alpha = \min\left(1, \frac{p(\theta'|y)}{p(\theta|y)}\right)
+ * $$
+ *
+ * **Optimal acceptance rate**: Target ~23.4% for high-dimensional problems, 44% for 1D.
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm|Metropolis-Hastings}
  */
 export class MetropolisHastings {
   /**

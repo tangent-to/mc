@@ -1,8 +1,23 @@
 import * as tf from '@tensorflow/tfjs-node';
 
 /**
- * Model class for defining Bayesian probabilistic models.
- * Similar to PyMC's Model context manager.
+ * Model class for defining Bayesian probabilistic models
+ *
+ * Similar to PyMC's Model context manager, this class represents a probabilistic model
+ * as a Directed Acyclic Graph (DAG) of random variables.
+ *
+ * **Joint probability**:
+ * $$
+ * p(\theta, y) = p(y|\theta)p(\theta)
+ * $$
+ * where $\theta$ are parameters (latent variables) and $y$ is observed data.
+ *
+ * **Posterior** (via Bayes' theorem):
+ * $$
+ * p(\theta|y) = \frac{p(y|\theta)p(\theta)}{p(y)} \propto p(y|\theta)p(\theta)
+ * $$
+ *
+ * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
 export class Model {
   constructor(name = 'model') {
@@ -89,12 +104,20 @@ export class Model {
       return logProbValue;
     });
 
-    // Extract gradient values
-    for (const name of paramNames) {
-      if (grads.grads[tfParams[name].id]) {
-        gradients[name] = grads.grads[tfParams[name].id];
+    // Extract gradient values and map back to variable names
+    // variableGrads returns gradients as an object keyed by variable
+    // We need to iterate through and match them to parameter names
+    const gradValues = Object.values(grads.grads);
+    const gradKeys = Object.keys(grads.grads);
+
+    paramNames.forEach((name, idx) => {
+      if (idx < gradValues.length) {
+        gradients[name] = gradValues[idx];
+      } else {
+        // If no gradient, create zero gradient
+        gradients[name] = tf.zeros(tfParams[name].shape);
       }
-    }
+    });
 
     // Clean up variables
     for (const name of paramNames) {
@@ -187,8 +210,10 @@ export class Model {
       // Single value predictions
       const sorted = [...predictions].sort((a, b) => a - b);
       const n = sorted.length;
-      const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
-      const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+      const lowerPercentile = (1 - credibleInterval) / 2;
+      const upperPercentile = 1 - lowerPercentile;
+      const lowerIdx = Math.floor(n * lowerPercentile);
+      const upperIdx = Math.min(Math.floor(n * upperPercentile), n - 1);
 
       return {
         mean: predictions.reduce((a, b) => a + b, 0) / n,
@@ -206,8 +231,10 @@ export class Model {
         const values = predictions.map(p => p[i]);
         const sorted = [...values].sort((a, b) => a - b);
         const n = sorted.length;
-        const lowerIdx = Math.floor(n * (1 - credibleInterval) / 2);
-        const upperIdx = Math.ceil(n * (1 + credibleInterval) / 2);
+        const lowerPercentile = (1 - credibleInterval) / 2;
+        const upperPercentile = 1 - lowerPercentile;
+        const lowerIdx = Math.floor(n * lowerPercentile);
+        const upperIdx = Math.min(Math.floor(n * upperPercentile), n - 1);
 
         mean[i] = values.reduce((a, b) => a + b, 0) / n;
         lower[i] = sorted[lowerIdx];

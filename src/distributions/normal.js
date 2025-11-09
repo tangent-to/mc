@@ -3,11 +3,18 @@ import { Distribution } from './base.js';
 
 /**
  * Normal (Gaussian) distribution
+ *
+ * Probability density function:
+ * $$
+ * p(x | \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
+ * $$
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Normal_distribution|Normal Distribution}
  */
 export class Normal extends Distribution {
   /**
-   * @param {number|tf.Tensor} mu - Mean parameter
-   * @param {number|tf.Tensor} sigma - Standard deviation parameter (must be positive)
+   * @param {number|tf.Tensor} mu - Mean parameter $\mu$
+   * @param {number|tf.Tensor} sigma - Standard deviation parameter $\sigma > 0$
    * @param {string} name - Name of the distribution
    */
   constructor(mu = 0, sigma = 1, name = 'Normal') {
@@ -18,6 +25,11 @@ export class Normal extends Distribution {
 
   /**
    * Log probability density function
+   *
+   * $$
+   * \log p(x | \mu, \sigma) = -\frac{1}{2}\log(2\pi) - \log(\sigma) - \frac{(x-\mu)^2}{2\sigma^2}
+   * $$
+   *
    * @param {tf.Tensor|number} value - Value to evaluate
    * @returns {tf.Tensor} Log probability
    */

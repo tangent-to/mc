@@ -24,7 +24,8 @@ export {
 // Samplers
 export {
   MetropolisHastings,
-  HamiltonianMC
+  HamiltonianMC,
+  NUTS
 } from './samplers/index.js';
 
 // Utilities
@@ -48,3 +49,14 @@ export {
   exportTraceForBrowser,
   importTraceFromJSON
 } from './utils/persistence.js';
+
+// Visualization utilities
+export {
+  tracePlot,
+  posteriorPlot,
+  autocorrPlot,
+  pairPlot,
+  forestPlot,
+  rankPlot,
+  energyPlot
+} from './utils/visualize.js';
