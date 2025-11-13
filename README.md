@@ -1,4 +1,4 @@
-# @tangent.to/mc - JavaScript Markov Chain Monte Carlo
+# @tangent/mc - JavaScript Markov Chain Monte Carlo
 
 A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript. Built on TensorFlow.js with automatic differentiation support for efficient MCMC sampling.
 
