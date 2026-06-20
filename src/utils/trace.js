@@ -38,30 +38,33 @@ export function summarize(samples) {
  */
 export function effectiveSampleSize(samples) {
   const n = samples.length;
+  if (n < 4) return n;
+
   const mean = samples.reduce((a, b) => a + b, 0) / n;
-  const variance = samples.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n;
+  // Biased autocovariance normalizer (divide by n) — standard for ESS.
+  const variance = samples.reduce((acc, val) => acc + (val - mean) ** 2, 0) / n;
+  if (variance === 0) return n;
 
-  // Compute autocorrelation
-  const maxLag = Math.min(Math.floor(n / 2), 100);
-  const autocorr = [];
-
-  for (let lag = 1; lag <= maxLag; lag++) {
+  const rho = (lag) => {
     let sum = 0;
-    for (let i = 0; i < n - lag; i++) {
-      sum += (samples[i] - mean) * (samples[i + lag] - mean);
-    }
-    const rho = sum / ((n - lag) * variance);
-    autocorr.push(rho);
+    for (let i = 0; i < n - lag; i++) sum += (samples[i] - mean) * (samples[i + lag] - mean);
+    return sum / (n * variance);
+  };
 
-    // Stop when autocorrelation becomes negative
-    if (rho < 0) break;
+  // Integrated autocorrelation time via Geyer's initial positive sequence:
+  // sum consecutive pairs Γ_m = ρ_{2m-1} + ρ_{2m}, which are non-negative for a
+  // reversible chain, and truncate at the first negative pair. This stays valid
+  // even when individual autocorrelations are negative (anti-correlated, i.e.
+  // very efficient, chains), unlike the naive Σρ which can make ESS negative.
+  let sumPairs = 0;
+  for (let m = 1; 2 * m < n; m++) {
+    const gamma = rho(2 * m - 1) + rho(2 * m);
+    if (gamma < 0) break;
+    sumPairs += gamma;
   }
 
-  // Compute ESS
-  const sumAutocorr = autocorr.reduce((a, b) => a + b, 0);
-  const ess = n / (1 + 2 * sumAutocorr);
-
-  return ess;
+  const tau = 1 + 2 * sumPairs; // ≥ 1, so 0 < ess ≤ n
+  return n / tau;
 }
 
 /**

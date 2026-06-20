@@ -18,13 +18,17 @@ import {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma
+  Gamma,
+  Lognormal,
+  HalfNormal
 } from './distributions/index.js';
 
 import {
   MetropolisHastings,
   HamiltonianMC,
-  NUTS
+  NUTS,
+  HMC,
+  summary
 } from './samplers/index.js';
 
 import {
@@ -66,7 +70,9 @@ export {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma
+  Gamma,
+  Lognormal,
+  HalfNormal
 };
 export { MetropolisHastings, HamiltonianMC, NUTS };
 export {
@@ -105,7 +111,9 @@ export const distributions = {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma
+  Gamma,
+  Lognormal,
+  HalfNormal
 };
 
 export const samplers = {
