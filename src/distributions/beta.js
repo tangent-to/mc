@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
-import { Distribution } from './base.js';
+import { Distribution, isOptions } from './base.js';
 import jstat from 'jstat';
 
 /**
@@ -7,12 +7,26 @@ import jstat from 'jstat';
  */
 export class Beta extends Distribution {
   /**
-   * @param {number|tf.Tensor} alpha - Shape parameter (must be > 0)
-   * @param {number|tf.Tensor} beta - Shape parameter (must be > 0)
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|tf.Tensor|Object} alpha - Shape parameter (> 0), or an options
+   *   object `{ alpha, beta, name }`
+   * @param {number|tf.Tensor} [beta] - Shape parameter (must be > 0)
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new Beta(2, 5)
+   * @example
+   * new Beta({ alpha: 2, beta: 5 })
    */
   constructor(alpha = 1, beta = 1, name = 'Beta') {
     super(name);
+    if (isOptions(alpha)) {
+      const o = alpha;
+      this.name = o.name ?? 'Beta';
+      alpha = o.alpha ?? 1;
+      beta = o.beta ?? 1;
+    }
     this.alpha = typeof alpha === 'number' ? tf.scalar(alpha) : alpha;
     this.beta = typeof beta === 'number' ? tf.scalar(beta) : beta;
   }
@@ -87,5 +101,13 @@ export class Beta extends Distribution {
       const denominator = tf.mul(tf.square(sum), tf.add(sum, 1));
       return tf.div(numerator, denominator);
     });
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{alpha: number, beta: number}}
+   */
+  getParams() {
+    return { alpha: this.alpha.arraySync(), beta: this.beta.arraySync() };
   }
 }

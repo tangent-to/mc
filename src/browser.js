@@ -1,30 +1,26 @@
 /**
- * Browser-compatible build of JSMC
- * Uses TensorFlow.js instead of tfjs-node
- * Excludes Node.js-specific features (fs operations)
+ * Browser-compatible build of @tangent.to/mc
+ * Uses TensorFlow.js (@tensorflow/tfjs) instead of tfjs-node and excludes
+ * Node.js-specific features (filesystem persistence).
+ *
+ * Exposes the same dual import shape as the Node entry point:
+ *   - flat named exports
+ *   - namespaced exports + a default export bundling every namespace
  */
 
 import * as tf from '@tensorflow/tfjs';
 
-// Re-export TensorFlow for use in browser
-export { tf };
+import { Model } from './model.js';
 
-// Export main classes (need to be browser-compatible versions)
-export { Model } from './model.js';
-
-// Distributions
-export {
+import {
   Distribution,
   Normal,
   Uniform,
   Bernoulli,
   Beta,
   Gamma,
-  GaussianProcess
-} from './distributions/index.js';
-
-// Kernels
-export {
+  GaussianProcess,
+  Kernel,
   RBF,
   Matern32,
   Matern52,
@@ -32,14 +28,13 @@ export {
   Linear
 } from './distributions/index.js';
 
-// Samplers
-export {
+import {
   MetropolisHastings,
-  HamiltonianMC
+  HamiltonianMC,
+  NUTS
 } from './samplers/index.js';
 
-// Utilities (trace analysis only, no file I/O)
-export {
+import {
   summarize,
   effectiveSampleSize,
   gelmanRubin,
@@ -48,8 +43,90 @@ export {
   traceToCSV
 } from './utils/trace.js';
 
-// Browser-compatible persistence
-export {
+import {
   exportTraceForBrowser,
   importTraceFromJSON
 } from './utils/persistence.js';
+
+// ---------------------------------------------------------------------------
+// Flat named exports (backwards compatible)
+// ---------------------------------------------------------------------------
+export { tf };
+export { Model };
+export {
+  Distribution,
+  Normal,
+  Uniform,
+  Bernoulli,
+  Beta,
+  Gamma,
+  GaussianProcess,
+  Kernel,
+  RBF,
+  Matern32,
+  Matern52,
+  Periodic,
+  Linear
+};
+export { MetropolisHastings, HamiltonianMC, NUTS };
+export {
+  summarize,
+  effectiveSampleSize,
+  gelmanRubin,
+  printSummary,
+  traceToJSON,
+  traceToCSV
+};
+export { exportTraceForBrowser, importTraceFromJSON };
+
+// ---------------------------------------------------------------------------
+// Namespaced exports (mirrors the @tangent.to/ds module convention)
+// ---------------------------------------------------------------------------
+export const distributions = {
+  Distribution,
+  Normal,
+  Uniform,
+  Bernoulli,
+  Beta,
+  Gamma,
+  GaussianProcess
+};
+
+export const kernels = {
+  Kernel,
+  RBF,
+  Matern32,
+  Matern52,
+  Periodic,
+  Linear
+};
+
+export const samplers = {
+  MetropolisHastings,
+  HamiltonianMC,
+  NUTS
+};
+
+export const diagnostics = {
+  summarize,
+  effectiveSampleSize,
+  gelmanRubin,
+  printSummary,
+  traceToJSON,
+  traceToCSV
+};
+
+export const io = {
+  exportTraceForBrowser,
+  importTraceFromJSON
+};
+
+export default {
+  tf,
+  Model,
+  distributions,
+  kernels,
+  samplers,
+  diagnostics,
+  io
+};

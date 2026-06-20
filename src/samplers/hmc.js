@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
+import { isOptions } from '../distributions/base.js';
 
 /**
  * Hamiltonian Monte Carlo (HMC) sampler
@@ -21,12 +22,33 @@ import * as tf from '@tensorflow/tfjs-node';
  */
 export class HamiltonianMC {
   /**
-   * @param {number} stepSize - Leapfrog step size (epsilon)
-   * @param {number} nSteps - Number of leapfrog steps (L)
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|Object} stepSize - Leapfrog step size (epsilon), or an options
+   *   object `{ stepSize, nSteps }`
+   * @param {number} [nSteps] - Number of leapfrog steps (L)
+   *
+   * @example
+   * new HamiltonianMC(0.01, 10)
+   * @example
+   * new HamiltonianMC({ stepSize: 0.01, nSteps: 10 })
    */
   constructor(stepSize = 0.01, nSteps = 10) {
+    if (isOptions(stepSize)) {
+      const o = stepSize;
+      nSteps = o.nSteps ?? 10;
+      stepSize = o.stepSize ?? 0.01;
+    }
     this.stepSize = stepSize;
     this.nSteps = nSteps;
+  }
+
+  /**
+   * Get the sampler's configuration.
+   * @returns {{stepSize: number, nSteps: number}}
+   */
+  getParams() {
+    return { stepSize: this.stepSize, nSteps: this.nSteps };
   }
 
   /**
@@ -115,14 +137,23 @@ export class HamiltonianMC {
 
   /**
    * Run HMC sampling
+   * The sampling controls may be passed positionally or as a single options
+   * object `{ nSamples, burnIn, thin }`.
+   *
    * @param {Model} model - The probabilistic model
    * @param {Object} initialValues - Initial parameter values
-   * @param {number} nSamples - Number of samples to generate
+   * @param {number|Object} nSamples - Number of samples, or an options object
    * @param {number} burnIn - Number of burn-in samples to discard
    * @param {number} thin - Thinning interval
    * @returns {Object} Trace object with samples and diagnostics
    */
   sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
+    if (isOptions(nSamples)) {
+      const o = nSamples;
+      burnIn = o.burnIn ?? 500;
+      thin = o.thin ?? 1;
+      nSamples = o.nSamples ?? 1000;
+    }
     const variableNames = model.getFreeVariableNames();
     const trace = {};
     const accepted = { count: 0, total: 0 };

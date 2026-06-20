@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
+import { isOptions } from '../distributions/base.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -25,11 +26,25 @@ import * as tf from '@tensorflow/tfjs-node';
  */
 export class NUTS {
   /**
-   * @param {number} stepSize - Initial leapfrog step size (will be adapted during warmup)
-   * @param {number} maxTreeDepth - Maximum tree depth (default 10, gives up to 2^10 = 1024 steps)
-   * @param {number} targetAcceptance - Target acceptance rate for step size adaptation (default 0.8)
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|Object} stepSize - Initial leapfrog step size (adapted during
+   *   warmup), or an options object `{ stepSize, maxTreeDepth, targetAcceptance }`
+   * @param {number} [maxTreeDepth] - Maximum tree depth (default 10, up to 2^10 steps)
+   * @param {number} [targetAcceptance] - Target acceptance rate for adaptation (default 0.8)
+   *
+   * @example
+   * new NUTS(0.01, 10, 0.8)
+   * @example
+   * new NUTS({ stepSize: 0.01, maxTreeDepth: 10, targetAcceptance: 0.8 })
    */
   constructor(stepSize = 0.01, maxTreeDepth = 10, targetAcceptance = 0.8) {
+    if (isOptions(stepSize)) {
+      const o = stepSize;
+      maxTreeDepth = o.maxTreeDepth ?? 10;
+      targetAcceptance = o.targetAcceptance ?? 0.8;
+      stepSize = o.stepSize ?? 0.01;
+    }
     this.stepSize = stepSize;
     this.maxTreeDepth = maxTreeDepth;
     this.targetAcceptance = targetAcceptance;
@@ -39,6 +54,18 @@ export class NUTS {
     this.gamma = 0.05;
     this.t0 = 10;
     this.kappa = 0.75;
+  }
+
+  /**
+   * Get the sampler's configuration.
+   * @returns {{stepSize: number, maxTreeDepth: number, targetAcceptance: number}}
+   */
+  getParams() {
+    return {
+      stepSize: this.stepSize,
+      maxTreeDepth: this.maxTreeDepth,
+      targetAcceptance: this.targetAcceptance
+    };
   }
 
   /**
@@ -228,14 +255,23 @@ export class NUTS {
 
   /**
    * Run NUTS sampling
+   * The sampling controls may be passed positionally or as a single options
+   * object `{ nSamples, nWarmup, thin }`.
+   *
    * @param {Model} model - The probabilistic model
    * @param {Object} initialValues - Initial parameter values
-   * @param {number} nSamples - Number of samples to generate
+   * @param {number|Object} nSamples - Number of samples, or an options object
    * @param {number} nWarmup - Number of warmup samples (for step size adaptation)
    * @param {number} thin - Thinning interval
    * @returns {Object} Trace object with samples and diagnostics
    */
   sample(model, initialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
+    if (isOptions(nSamples)) {
+      const o = nSamples;
+      nWarmup = o.nWarmup ?? o.burnIn ?? 500;
+      thin = o.thin ?? 1;
+      nSamples = o.nSamples ?? 1000;
+    }
     const variableNames = model.getFreeVariableNames();
     const trace = {};
     const accepted = { count: 0, total: 0 };

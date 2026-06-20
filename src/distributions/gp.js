@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import { Matrix, CholeskyDecomposition } from 'ml-matrix';
-import { Distribution } from './base.js';
+import { Distribution, isOptions } from './base.js';
 import { RBF } from './kernels.js';
 
 /**
@@ -32,13 +32,28 @@ import { RBF } from './kernels.js';
  */
 export class GaussianProcess extends Distribution {
   /**
-   * @param {Function|number} mean - Mean function or constant mean
-   * @param {Object} kernel - Kernel function (e.g., RBF, Matern32)
-   * @param {number} noiseVariance - Observation noise variance (σ²_noise)
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {Function|number|Object} mean - Constant mean, or an options object
+   *   `{ mean, kernel, noiseVariance | alpha | noiseLevel, name }`
+   * @param {Object} [kernel] - Kernel function (e.g., RBF, Matern32)
+   * @param {number} [noiseVariance] - Observation noise variance (σ²_noise)
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new GaussianProcess(0, new RBF(1, 1), 0.01)
+   * @example
+   * new GaussianProcess({ kernel: new RBF(1, 1), noiseVariance: 0.01 })
    */
   constructor(mean = 0, kernel = null, noiseVariance = 0.01, name = 'GaussianProcess') {
     super(name);
+    if (isOptions(mean)) {
+      const o = mean;
+      this.name = o.name ?? 'GaussianProcess';
+      kernel = o.kernel ?? null;
+      noiseVariance = o.noiseVariance ?? o.alpha ?? o.noiseLevel ?? 0.01;
+      mean = o.mean ?? 0;
+    }
     this.meanValue = mean;
     this.kernel = kernel || new RBF(1.0, 1.0);
     this.noiseVariance = noiseVariance;
@@ -105,6 +120,14 @@ export class GaussianProcess extends Distribution {
   }
 
   /**
+   * Whether the GP has been conditioned on training data.
+   * @returns {boolean}
+   */
+  isFitted() {
+    return this.X_train !== null;
+  }
+
+  /**
    * Forward substitution for lower triangular matrix
    */
   _forwardSubstitution(L, b) {
@@ -143,10 +166,14 @@ export class GaussianProcess extends Distribution {
   /**
    * Predict at new points (posterior mean and variance)
    * @param {Array|tf.Tensor} X_new - Test inputs [n_new, d]
-   * @param {boolean} returnStd - Whether to return standard deviation
+   * @param {boolean|Object} returnStd - Whether to return standard deviation,
+   *   or an options object `{ returnStd }`
    * @returns {Object} {mean, std} or just mean
    */
   predict(X_new, returnStd = true) {
+    if (isOptions(returnStd)) {
+      returnStd = returnStd.returnStd ?? true;
+    }
     if (this.X_train === null) {
       throw new Error('GP must be fit to data before prediction');
     }

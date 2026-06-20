@@ -6,6 +6,14 @@ A PyMC-inspired probabilistic programming library for Bayesian inference in Java
 
 MC brings the power of Bayesian statistical modeling to JavaScript, providing an intuitive API similar to PyMC for defining probabilistic models as Directed Acyclic Graphs (DAGs) and performing inference using Markov Chain Monte Carlo methods.
 
+### API conventions
+
+MC follows the same API conventions as its sibling data-science package [`@tangent.to/ds`](https://github.com/tangent-to/ds):
+
+- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `kernels`, `samplers`, `diagnostics`, `io`, and `plot`.
+- **Options-object constructors.** Every configurable class accepts a single options object in addition to positional arguments, e.g. `new Normal({ mean: 0, sd: 1 })` or `new MetropolisHastings({ proposalStd: 0.5 })`. Positional forms continue to work.
+- **Introspection.** Distributions, kernels, and samplers expose `getParams()`; kernels also support `setParams()` and a `call()` alias for `compute()`.
+
 ### Key Features
 
 - **PyMC-like DAG structure**: Define models by connecting distributions in a directed acyclic graph
@@ -57,12 +65,12 @@ Here's a simple Bayesian linear regression example:
 import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
 
 // Create model
-const model = new Model('linear_regression');
+const model = new Model({ name: 'linear_regression' });
 
-// Define priors (PyMC-like syntax)
-const alpha = new Normal(0, 10, 'alpha');
-const beta = new Normal(0, 10, 'beta');
-const sigma = new Uniform(0.01, 5, 'sigma');
+// Define priors (options-object form; positional `new Normal(0, 10, 'alpha')` also works)
+const alpha = new Normal({ mean: 0, sd: 10, name: 'alpha' });
+const beta = new Normal({ mean: 0, sd: 10, name: 'beta' });
+const sigma = new Uniform({ min: 0.01, max: 5, name: 'sigma' });
 
 model.addVariable('alpha', alpha);
 model.addVariable('beta', beta);
@@ -84,12 +92,24 @@ model.logProb = function(params) {
   return logProb;
 };
 
-// Run MCMC sampling
-const sampler = new MetropolisHastings(0.5);
-const trace = sampler.sample(model, initialValues, 1000, 500, 1);
+// Run MCMC sampling (options-object form; positional args also work)
+const sampler = new MetropolisHastings({ proposalStd: 0.5 });
+const trace = sampler.sample(model, initialValues, { nSamples: 1000, burnIn: 500, thin: 1 });
 
 // Analyze results
 printSummary(trace);
+```
+
+### Namespaced / default imports
+
+```javascript
+import mc from '@tangent.to/mc';
+
+const model = new mc.Model({ name: 'linear_regression' });
+model.addVariable('alpha', new mc.distributions.Normal({ mean: 0, sd: 10, name: 'alpha' }));
+
+const sampler = new mc.samplers.MetropolisHastings({ proposalStd: 0.5 });
+// mc.kernels, mc.diagnostics, mc.io, mc.plot are also available
 ```
 
 ## Core Concepts
@@ -114,22 +134,26 @@ const y = new Normal(mu_group, sigma_obs);
 
 JSMC provides a rich set of probability distributions:
 
+Each constructor accepts positional arguments or an options object (shown second).
+
 #### Continuous Distributions
 
-- **Normal**: `new Normal(mu, sigma)` - Gaussian distribution
-- **Uniform**: `new Uniform(lower, upper)` - Uniform distribution
-- **Beta**: `new Beta(alpha, beta)` - Beta distribution (for probabilities)
-- **Gamma**: `new Gamma(alpha, beta)` - Gamma distribution (for positive values)
+- **Normal**: `new Normal(mu, sigma)` / `new Normal({ mean, sd })` - Gaussian distribution
+- **Uniform**: `new Uniform(lower, upper)` / `new Uniform({ min, max })` - Uniform distribution
+- **Beta**: `new Beta(alpha, beta)` / `new Beta({ alpha, beta })` - Beta distribution (for probabilities)
+- **Gamma**: `new Gamma(alpha, beta)` / `new Gamma({ shape, rate })` - Gamma distribution (for positive values)
 
 #### Discrete Distributions
 
-- **Bernoulli**: `new Bernoulli(p)` - Binary outcomes
+- **Bernoulli**: `new Bernoulli(p)` / `new Bernoulli({ p })` - Binary outcomes
 
 All distributions support:
 - `logProb(value)` - Compute log probability density/mass
+- `pdf(value)` - Compute probability density/mass (`exp(logProb)`)
 - `sample(shape)` - Generate random samples
 - `mean()` - Get the distribution mean
 - `variance()` - Get the distribution variance
+- `getParams()` - Get the distribution's parameters as a plain object
 
 ### Gaussian Processes
 
@@ -138,19 +162,19 @@ JSMC includes a full implementation of Gaussian Processes for non-parametric reg
 ```javascript
 import { GaussianProcess, RBF, Matern32 } from '@tangent.to/mc';
 
-// Create GP with RBF kernel
-const kernel = new RBF(lengthscale=1.0, variance=1.0);
-const gp = new GaussianProcess(meanFunction=0, kernel, noiseVariance=0.01);
+// Create GP with RBF kernel (options-object form; positional args also work)
+const kernel = new RBF({ lengthScale: 1.0, variance: 1.0 });
+const gp = new GaussianProcess({ mean: 0, kernel, noiseVariance: 0.01 });
 
 // Fit to data
 gp.fit(X_train, y_train);
 
 // Make predictions
-const predictions = gp.predict(X_test, returnStd=true);
+const predictions = gp.predict(X_test, { returnStd: true });
 // Returns: { mean: [...], std: [...] }
 
 // Sample functions from posterior
-const posteriorSamples = gp.samplePosterior(X_test, nSamples=5);
+const posteriorSamples = gp.samplePosterior(X_test, 5);
 ```
 
 **Available Kernels**:
@@ -206,8 +230,8 @@ const jsonString = exportTraceForBrowser(trace);
 A simple but effective random-walk sampler:
 
 ```javascript
-const sampler = new MetropolisHastings(proposalStd);
-const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
+const sampler = new MetropolisHastings({ proposalStd });
+const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 ```
 
 **Parameters**:
@@ -223,8 +247,8 @@ const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
 A gradient-based sampler that uses automatic differentiation:
 
 ```javascript
-const sampler = new HamiltonianMC(stepSize, nSteps);
-const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
+const sampler = new HamiltonianMC({ stepSize, nSteps });
+const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 ```
 
 **Parameters**:
@@ -310,25 +334,38 @@ All distributions inherit from the base `Distribution` class:
 ```javascript
 class Distribution {
   logProb(value)      // Log probability
+  pdf(value)          // Probability density/mass (exp of logProb)
   sample(shape)       // Generate samples
   observe(data)       // Set observed data
   mean()             // Distribution mean
   variance()         // Distribution variance
+  getParams()        // Parameters as a plain object
 }
 ```
 
 ### Sampler Classes
 
+Constructors and `sample()` accept either positional arguments or a single
+options object.
+
 ```javascript
 class MetropolisHastings {
-  constructor(proposalStd)
-  sample(model, initialValues, nSamples, burnIn, thin)
+  constructor(proposalStd)                 // or ({ proposalStd })
+  sample(model, initialValues, nSamples, burnIn, thin)  // or (model, init, { nSamples, burnIn, thin })
   tuneProposal(acceptanceRate)
+  getParams()
 }
 
 class HamiltonianMC {
-  constructor(stepSize, nSteps)
+  constructor(stepSize, nSteps)            // or ({ stepSize, nSteps })
   sample(model, initialValues, nSamples, burnIn, thin)
+  getParams()
+}
+
+class NUTS {
+  constructor(stepSize, maxTreeDepth, targetAcceptance)  // or ({ stepSize, maxTreeDepth, targetAcceptance })
+  sample(model, initialValues, nSamples, nWarmup, thin)
+  getParams()
 }
 ```
 

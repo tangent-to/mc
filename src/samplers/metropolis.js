@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import jstat from 'jstat';
+import { isOptions } from '../distributions/base.js';
 
 /**
  * Metropolis-Hastings MCMC sampler
@@ -19,22 +20,50 @@ import jstat from 'jstat';
  */
 export class MetropolisHastings {
   /**
-   * @param {number} proposalStd - Standard deviation for Gaussian proposal distribution
+   * Accepts either a positional argument or a single options object.
+   *
+   * @param {number|Object} proposalStd - Standard deviation for the Gaussian
+   *   proposal distribution, or an options object `{ proposalStd }`
+   *
+   * @example
+   * new MetropolisHastings(0.5)
+   * @example
+   * new MetropolisHastings({ proposalStd: 0.5 })
    */
   constructor(proposalStd = 0.1) {
+    if (isOptions(proposalStd)) {
+      proposalStd = proposalStd.proposalStd ?? 0.1;
+    }
     this.proposalStd = proposalStd;
   }
 
   /**
+   * Get the sampler's configuration.
+   * @returns {{proposalStd: number}}
+   */
+  getParams() {
+    return { proposalStd: this.proposalStd };
+  }
+
+  /**
    * Run Metropolis-Hastings sampling
+   * The sampling controls may be passed positionally or as a single options
+   * object `{ nSamples, burnIn, thin }`.
+   *
    * @param {Model} model - The probabilistic model
    * @param {Object} initialValues - Initial parameter values
-   * @param {number} nSamples - Number of samples to generate
+   * @param {number|Object} nSamples - Number of samples, or an options object
    * @param {number} burnIn - Number of burn-in samples to discard
    * @param {number} thin - Thinning interval (keep every nth sample)
    * @returns {Object} Trace object with samples and diagnostics
    */
   sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
+    if (isOptions(nSamples)) {
+      const o = nSamples;
+      burnIn = o.burnIn ?? 500;
+      thin = o.thin ?? 1;
+      nSamples = o.nSamples ?? 1000;
+    }
     const variableNames = model.getFreeVariableNames();
     const trace = {};
     const accepted = { count: 0, total: 0 };

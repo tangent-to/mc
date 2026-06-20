@@ -1,19 +1,26 @@
-// Main exports for JSMC library
-export { Model } from './model.js';
+// Main entry point for @tangent.to/mc
+//
+// Two complementary import styles are supported, matching the convention used
+// by the sibling @tangent.to/ds package:
+//
+//   1. Flat named imports:
+//        import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
+//
+//   2. Namespaced imports (and a default export bundling every namespace):
+//        import { distributions, samplers, diagnostics } from '@tangent.to/mc';
+//        import mc from '@tangent.to/mc';  // mc.distributions.Normal, ...
 
-// Distributions
-export {
+import { Model } from './model.js';
+
+import {
   Distribution,
   Normal,
   Uniform,
   Bernoulli,
   Beta,
   Gamma,
-  GaussianProcess
-} from './distributions/index.js';
-
-// Kernels for Gaussian Processes
-export {
+  GaussianProcess,
+  Kernel,
   RBF,
   Matern32,
   Matern52,
@@ -21,15 +28,13 @@ export {
   Linear
 } from './distributions/index.js';
 
-// Samplers
-export {
+import {
   MetropolisHastings,
   HamiltonianMC,
   NUTS
 } from './samplers/index.js';
 
-// Utilities
-export {
+import {
   summarize,
   effectiveSampleSize,
   gelmanRubin,
@@ -38,8 +43,7 @@ export {
   traceToCSV
 } from './utils/trace.js';
 
-// Persistence utilities
-export {
+import {
   saveTrace,
   loadTrace,
   saveModelConfig,
@@ -50,8 +54,7 @@ export {
   importTraceFromJSON
 } from './utils/persistence.js';
 
-// Visualization utilities
-export {
+import {
   tracePlot,
   posteriorPlot,
   autocorrPlot,
@@ -60,3 +63,120 @@ export {
   rankPlot,
   energyPlot
 } from './utils/visualize.js';
+
+// ---------------------------------------------------------------------------
+// Flat named exports (backwards compatible)
+// ---------------------------------------------------------------------------
+export { Model };
+export {
+  Distribution,
+  Normal,
+  Uniform,
+  Bernoulli,
+  Beta,
+  Gamma,
+  GaussianProcess,
+  Kernel,
+  RBF,
+  Matern32,
+  Matern52,
+  Periodic,
+  Linear
+};
+export { MetropolisHastings, HamiltonianMC, NUTS };
+export {
+  summarize,
+  effectiveSampleSize,
+  gelmanRubin,
+  printSummary,
+  traceToJSON,
+  traceToCSV
+};
+export {
+  saveTrace,
+  loadTrace,
+  saveModelConfig,
+  saveModelState,
+  loadModelState,
+  saveTraceCSV,
+  exportTraceForBrowser,
+  importTraceFromJSON
+};
+export {
+  tracePlot,
+  posteriorPlot,
+  autocorrPlot,
+  pairPlot,
+  forestPlot,
+  rankPlot,
+  energyPlot
+};
+
+// ---------------------------------------------------------------------------
+// Namespaced exports (mirrors the @tangent.to/ds module convention)
+// ---------------------------------------------------------------------------
+export const distributions = {
+  Distribution,
+  Normal,
+  Uniform,
+  Bernoulli,
+  Beta,
+  Gamma,
+  GaussianProcess
+};
+
+export const kernels = {
+  Kernel,
+  RBF,
+  Matern32,
+  Matern52,
+  Periodic,
+  Linear
+};
+
+export const samplers = {
+  MetropolisHastings,
+  HamiltonianMC,
+  NUTS
+};
+
+export const diagnostics = {
+  summarize,
+  effectiveSampleSize,
+  gelmanRubin,
+  printSummary,
+  traceToJSON,
+  traceToCSV
+};
+
+export const io = {
+  saveTrace,
+  loadTrace,
+  saveModelConfig,
+  saveModelState,
+  loadModelState,
+  saveTraceCSV,
+  exportTraceForBrowser,
+  importTraceFromJSON
+};
+
+export const plot = {
+  tracePlot,
+  posteriorPlot,
+  autocorrPlot,
+  pairPlot,
+  forestPlot,
+  rankPlot,
+  energyPlot
+};
+
+// Default export: the whole library grouped by namespace
+export default {
+  Model,
+  distributions,
+  kernels,
+  samplers,
+  diagnostics,
+  io,
+  plot
+};

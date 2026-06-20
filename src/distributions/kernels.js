@@ -1,8 +1,56 @@
 import * as tf from '@tensorflow/tfjs-node';
+import { isOptions } from './base.js';
 
 /**
  * Kernel functions for Gaussian Processes
  */
+
+/**
+ * Abstract base class for GP kernels.
+ *
+ * Mirrors the kernel interface of the sibling `@tangent.to/ds` package:
+ * subclasses implement {@link Kernel#compute} and inherit `call`, `getParams`
+ * and `setParams`.
+ */
+export class Kernel {
+  /**
+   * Compute the kernel (covariance) matrix.
+   * @param {tf.Tensor} X1 - First set of points [n1, d]
+   * @param {tf.Tensor} [X2] - Second set of points [n2, d] (defaults to X1)
+   * @returns {tf.Tensor} Kernel matrix [n1, n2]
+   */
+  compute(X1, X2 = null) {
+    throw new Error('compute() must be implemented by subclass');
+  }
+
+  /**
+   * Alias for {@link Kernel#compute}, matching the `@tangent.to/ds` kernel API.
+   * @param {tf.Tensor} X1 - First set of points [n1, d]
+   * @param {tf.Tensor} [X2] - Second set of points [n2, d] (defaults to X1)
+   * @returns {tf.Tensor} Kernel matrix [n1, n2]
+   */
+  call(X1, X2 = null) {
+    return this.compute(X1, X2);
+  }
+
+  /**
+   * Get kernel hyperparameters.
+   * @returns {Object} Hyperparameters
+   */
+  getParams() {
+    return {};
+  }
+
+  /**
+   * Set kernel hyperparameters.
+   * @param {Object} params - New parameters (merged into the kernel)
+   * @returns {this}
+   */
+  setParams(params = {}) {
+    Object.assign(this, params);
+    return this;
+  }
+}
 
 /**
  * Radial Basis Function (RBF) / Squared Exponential kernel
@@ -17,14 +65,37 @@ import * as tf from '@tensorflow/tfjs-node';
  *
  * @see {@link https://en.wikipedia.org/wiki/Radial_basis_function_kernel|RBF Kernel}
  */
-export class RBF {
+export class RBF extends Kernel {
   /**
-   * @param {number} lengthscale - Length scale parameter $\ell > 0$ (controls how quickly the correlation decays with distance)
-   * @param {number} variance - Variance parameter $\sigma^2 > 0$ (controls the amplitude of the function)
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|Object} lengthScale - Length scale $\ell > 0$, or an options
+   *   object `{ lengthScale | lengthscale, variance | amplitude }`
+   * @param {number} [variance] - Variance parameter $\sigma^2 > 0$
+   *
+   * @example
+   * new RBF(1.0, 1.0)
+   * @example
+   * new RBF({ lengthScale: 1.0, variance: 1.0 })
    */
-  constructor(lengthscale = 1.0, variance = 1.0) {
-    this.lengthscale = lengthscale;
+  constructor(lengthScale = 1.0, variance = 1.0) {
+    super();
+    if (isOptions(lengthScale)) {
+      const o = lengthScale;
+      lengthScale = o.lengthScale ?? o.lengthscale ?? o.length_scale ?? 1.0;
+      variance = o.variance ?? o.amplitude ?? 1.0;
+    }
+    this.lengthscale = lengthScale;
     this.variance = variance;
+  }
+
+  /** Length scale parameter (camelCase alias of `lengthscale`). */
+  get lengthScale() {
+    return this.lengthscale;
+  }
+
+  set lengthScale(value) {
+    this.lengthscale = value;
   }
 
   /**
@@ -57,6 +128,10 @@ export class RBF {
       return K;
     });
   }
+
+  getParams() {
+    return { lengthScale: this.lengthscale, variance: this.variance };
+  }
 }
 
 /**
@@ -73,14 +148,31 @@ export class RBF {
  *
  * @see {@link https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function|Matérn Covariance}
  */
-export class Matern32 {
+export class Matern32 extends Kernel {
   /**
-   * @param {number} lengthscale - Length scale parameter $\ell > 0$
-   * @param {number} variance - Variance parameter $\sigma^2 > 0$
+   * Accepts either positional arguments or a single options object
+   * `{ lengthScale | lengthscale, variance }`.
+   *
+   * @param {number|Object} lengthScale - Length scale $\ell > 0$
+   * @param {number} [variance] - Variance parameter $\sigma^2 > 0$
    */
-  constructor(lengthscale = 1.0, variance = 1.0) {
-    this.lengthscale = lengthscale;
+  constructor(lengthScale = 1.0, variance = 1.0) {
+    super();
+    if (isOptions(lengthScale)) {
+      const o = lengthScale;
+      lengthScale = o.lengthScale ?? o.lengthscale ?? 1.0;
+      variance = o.variance ?? o.amplitude ?? 1.0;
+    }
+    this.lengthscale = lengthScale;
     this.variance = variance;
+  }
+
+  get lengthScale() {
+    return this.lengthscale;
+  }
+
+  set lengthScale(value) {
+    this.lengthscale = value;
   }
 
   /**
@@ -118,6 +210,10 @@ export class Matern32 {
       return K;
     });
   }
+
+  getParams() {
+    return { lengthScale: this.lengthscale, variance: this.variance };
+  }
 }
 
 /**
@@ -134,14 +230,31 @@ export class Matern32 {
  *
  * @see {@link https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function|Matérn Covariance}
  */
-export class Matern52 {
+export class Matern52 extends Kernel {
   /**
-   * @param {number} lengthscale - Length scale parameter $\ell > 0$
-   * @param {number} variance - Variance parameter $\sigma^2 > 0$
+   * Accepts either positional arguments or a single options object
+   * `{ lengthScale | lengthscale, variance }`.
+   *
+   * @param {number|Object} lengthScale - Length scale $\ell > 0$
+   * @param {number} [variance] - Variance parameter $\sigma^2 > 0$
    */
-  constructor(lengthscale = 1.0, variance = 1.0) {
-    this.lengthscale = lengthscale;
+  constructor(lengthScale = 1.0, variance = 1.0) {
+    super();
+    if (isOptions(lengthScale)) {
+      const o = lengthScale;
+      lengthScale = o.lengthScale ?? o.lengthscale ?? 1.0;
+      variance = o.variance ?? o.amplitude ?? 1.0;
+    }
+    this.lengthscale = lengthScale;
     this.variance = variance;
+  }
+
+  get lengthScale() {
+    return this.lengthscale;
+  }
+
+  set lengthScale(value) {
+    this.lengthscale = value;
   }
 
   /**
@@ -183,6 +296,10 @@ export class Matern52 {
       return K;
     });
   }
+
+  getParams() {
+    return { lengthScale: this.lengthscale, variance: this.variance };
+  }
 }
 
 /**
@@ -198,16 +315,34 @@ export class Matern52 {
  *
  * @see {@link https://www.cs.toronto.edu/~duvenaud/cookbook/|Kernel Cookbook}
  */
-export class Periodic {
+export class Periodic extends Kernel {
   /**
-   * @param {number} period - Period parameter $p > 0$ (the repeat period of the function)
-   * @param {number} lengthscale - Length scale parameter $\ell > 0$ (smoothness within each period)
-   * @param {number} variance - Variance parameter $\sigma^2 > 0$
+   * Accepts either positional arguments or a single options object
+   * `{ period, lengthScale | lengthscale, variance }`.
+   *
+   * @param {number|Object} period - Period parameter $p > 0$
+   * @param {number} [lengthScale] - Length scale $\ell > 0$ (smoothness within each period)
+   * @param {number} [variance] - Variance parameter $\sigma^2 > 0$
    */
-  constructor(period = 1.0, lengthscale = 1.0, variance = 1.0) {
+  constructor(period = 1.0, lengthScale = 1.0, variance = 1.0) {
+    super();
+    if (isOptions(period)) {
+      const o = period;
+      period = o.period ?? 1.0;
+      lengthScale = o.lengthScale ?? o.lengthscale ?? 1.0;
+      variance = o.variance ?? o.amplitude ?? 1.0;
+    }
     this.period = period;
-    this.lengthscale = lengthscale;
+    this.lengthscale = lengthScale;
     this.variance = variance;
+  }
+
+  get lengthScale() {
+    return this.lengthscale;
+  }
+
+  set lengthScale(value) {
+    this.lengthscale = value;
   }
 
   /**
@@ -241,6 +376,14 @@ export class Periodic {
       return K;
     });
   }
+
+  getParams() {
+    return {
+      period: this.period,
+      lengthScale: this.lengthscale,
+      variance: this.variance
+    };
+  }
 }
 
 /**
@@ -256,12 +399,21 @@ export class Periodic {
  *
  * @see {@link https://www.cs.toronto.edu/~duvenaud/cookbook/|Kernel Cookbook}
  */
-export class Linear {
+export class Linear extends Kernel {
   /**
-   * @param {number} variance - Variance parameter $\sigma^2 > 0$
-   * @param {number} offset - Offset parameter $c$ (the origin of the linear function)
+   * Accepts either positional arguments or a single options object
+   * `{ variance, offset }`.
+   *
+   * @param {number|Object} variance - Variance parameter $\sigma^2 > 0$
+   * @param {number} [offset] - Offset parameter $c$ (origin of the linear function)
    */
   constructor(variance = 1.0, offset = 0.0) {
+    super();
+    if (isOptions(variance)) {
+      const o = variance;
+      variance = o.variance ?? o.amplitude ?? 1.0;
+      offset = o.offset ?? 0.0;
+    }
     this.variance = variance;
     this.offset = offset;
   }
@@ -286,5 +438,9 @@ export class Linear {
 
       return K;
     });
+  }
+
+  getParams() {
+    return { variance: this.variance, offset: this.offset };
   }
 }

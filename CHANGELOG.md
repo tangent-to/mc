@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+**API alignment with `@tangent.to/ds`**
+- Namespaced exports (`distributions`, `kernels`, `samplers`, `diagnostics`, `io`, `plot`) and a default export bundling every namespace, alongside the existing flat named exports.
+- Options-object constructors for every configurable class (distributions, kernels, Gaussian processes, samplers, and `Model`), e.g. `new Normal({ mean, sd })` and `new MetropolisHastings({ proposalStd })`. Positional forms remain supported.
+- Options-object form for sampler `sample()` run controls, e.g. `sample(model, init, { nSamples, burnIn, thin })`.
+- `getParams()` on distributions, kernels, and samplers; `setParams()` on kernels.
+- `Kernel` base class (now exported) with a `call()` alias for `compute()`; all kernels extend it and expose a camelCase `lengthScale` accessor (alias of `lengthscale`).
+- `pdf()` on distributions and `isFitted()` on `GaussianProcess`.
+
+### Changed
+- `package.json` now declares a `module` entry point and `import`/`default` export conditions, matching the `@tangent.to/ds` packaging convention.
+
 ## [0.2.0] - 2025-11-06
 
 ### Added

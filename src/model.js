@@ -20,7 +20,20 @@ import * as tf from '@tensorflow/tfjs-node';
  * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
 export class Model {
+  /**
+   * Accepts either a positional name or a single options object `{ name }`.
+   *
+   * @param {string|Object} name - Model name, or an options object `{ name }`
+   *
+   * @example
+   * new Model('linear_regression')
+   * @example
+   * new Model({ name: 'linear_regression' })
+   */
   constructor(name = 'model') {
+    if (name !== null && typeof name === 'object' && !Array.isArray(name)) {
+      name = name.name ?? 'model';
+    }
     this.name = name;
     this.variables = new Map(); // Random variables in the model
     this.observedVars = new Map(); // Observed data

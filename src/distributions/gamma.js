@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
-import { Distribution } from './base.js';
+import { Distribution, isOptions } from './base.js';
 import jstat from 'jstat';
 
 /**
@@ -7,12 +7,26 @@ import jstat from 'jstat';
  */
 export class Gamma extends Distribution {
   /**
-   * @param {number|tf.Tensor} alpha - Shape parameter (must be > 0)
-   * @param {number|tf.Tensor} beta - Rate parameter (must be > 0)
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|tf.Tensor|Object} alpha - Shape parameter (> 0), or an options
+   *   object `{ alpha | shape, beta | rate, name }`
+   * @param {number|tf.Tensor} [beta] - Rate parameter (must be > 0)
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new Gamma(2, 1)
+   * @example
+   * new Gamma({ shape: 2, rate: 1 })
    */
   constructor(alpha = 1, beta = 1, name = 'Gamma') {
     super(name);
+    if (isOptions(alpha)) {
+      const o = alpha;
+      this.name = o.name ?? 'Gamma';
+      alpha = o.alpha ?? o.shape ?? 1;
+      beta = o.beta ?? o.rate ?? 1;
+    }
     this.alpha = typeof alpha === 'number' ? tf.scalar(alpha) : alpha;
     this.beta = typeof beta === 'number' ? tf.scalar(beta) : beta;
   }
@@ -88,5 +102,13 @@ export class Gamma extends Distribution {
    */
   variance() {
     return tf.div(this.alpha, tf.square(this.beta));
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{alpha: number, beta: number}}
+   */
+  getParams() {
+    return { alpha: this.alpha.arraySync(), beta: this.beta.arraySync() };
   }
 }
