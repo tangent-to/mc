@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `package.json` now declares a `module` entry point and `import`/`default` export conditions, matching the `@tangent.to/ds` packaging convention.
 
 ### Removed
+- **Gaussian Processes.** The `GaussianProcess` distribution and its GP kernels (`Kernel`, `RBF`, `Matern32`, `Matern52`, `Periodic`, `Linear`) have been removed, along with the `kernels` namespace. GP regression is an ML concern better served by `@tangent.to/ds`'s `GaussianProcessRegressor`; the `mc` implementation overlapped it, was the buggiest part of the package, and was the only consumer of the `ml-matrix` dependency (now dropped).
 - `energyPlot`, a non-functional placeholder, has been removed from the public API.
 
 ### Internal

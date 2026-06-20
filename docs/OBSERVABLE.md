@@ -75,68 +75,6 @@ Plot.plot({
 })
 ```
 
-### 4. Gaussian Process Visualization
-
-```javascript
-{
-  const { GaussianProcess, RBF } = await import("jsmc/browser");
-
-  // Training data
-  const X_train = [[-2], [-1], [0], [1], [2]];
-  const y_train = X_train.map(([x]) => Math.sin(x) + Math.random() * 0.1);
-
-  // Fit GP
-  const kernel = new RBF(1.0, 1.0);
-  const gp = new GaussianProcess(0, kernel, 0.05);
-  gp.fit(X_train, y_train);
-
-  // Predict
-  const X_test = Array.from({length: 100}, (_, i) => [(i - 50) / 10]);
-  const predictions = gp.predict(X_test, true);
-
-  // Prepare data for plotting
-  const data = X_test.map(([x], i) => ({
-    x: x,
-    mean: predictions.mean[i],
-    lower: predictions.mean[i] - 2 * predictions.std[i],
-    upper: predictions.mean[i] + 2 * predictions.std[i]
-  }));
-
-  return data;
-}
-```
-
-Then visualize with confidence bands:
-
-```javascript
-Plot.plot({
-  marks: [
-    // Confidence band
-    Plot.areaY(gpData, {
-      x: "x",
-      y1: "lower",
-      y2: "upper",
-      fill: "steelblue",
-      fillOpacity: 0.2
-    }),
-    // Mean prediction
-    Plot.line(gpData, {
-      x: "x",
-      y: "mean",
-      stroke: "steelblue"
-    }),
-    // Training points
-    Plot.dot(trainingData, {
-      x: "x",
-      y: "y",
-      fill: "red"
-    })
-  ],
-  y: {label: "y"},
-  x: {label: "x"}
-})
-```
-
 ## Browser-Specific Considerations
 
 ### Memory Management
@@ -301,6 +239,5 @@ Plot.plot({
 
 Coming soon:
 - Bayesian Linear Regression
-- Gaussian Process Regression with Interactive Kernel Selection
 - Hierarchical Models with Partial Pooling
 - A/B Testing with Bayesian Statistics

@@ -36,7 +36,6 @@ The trade-off is worth it for the performance and reliability TensorFlow.js prov
 | Visualization | ArviZ | External tools | Observable, D3.js recommended |
 | Performance | High (JAX/C++) | Medium (JS/WASM) | ~2-5x slower typically |
 | Browser Support | No | Yes | JSMC's key advantage |
-| Gaussian Processes | Yes | Yes | Both support GPs |
 
 ## Performance Considerations
 
@@ -46,7 +45,6 @@ Typical performance on a modern CPU:
 
 - **Metropolis-Hastings**: ~1000-5000 samples/second (simple models)
 - **HMC**: ~100-500 samples/second (depends on gradient complexity)
-- **Gaussian Processes**: ~10-100 predictions/second (depends on training set size)
 
 **Optimization Tips**:
 
@@ -198,7 +196,6 @@ function doEverything() {
 - [ ] NUTS (No-U-Turn Sampler)
 - [ ] Additional distributions (Poisson, Student-t, Exponential, Categorical)
 - [ ] Variational inference (ADVI)
-- [ ] Sparse Gaussian Processes (inducing points)
 - [ ] Model comparison (WAIC, LOO)
 
 **Medium Priority**:

@@ -36,7 +36,6 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
 - **TensorFlow.js integration** - Automatic differentiation for gradient-based samplers
 - **Multiple MCMC samplers** - Metropolis-Hastings and Hamiltonian Monte Carlo
 - **Rich distribution library** - Normal, Uniform, Beta, Gamma, Bernoulli, and more
-- **Gaussian Processes** - Non-parametric regression with multiple kernel functions
 - **Posterior predictions** - Generate predictions with uncertainty from MCMC samples
 - **Model persistence** - Save and load traces and model configurations to JSON
 - **Browser compatible** - Run in Node.js or in the browser (including ObservableHQ)
@@ -86,7 +85,6 @@ printSummary(trace);
 - [API Reference](api/)
 - [Distributions](api/distributions.html)
 - [Samplers](api/samplers.html)
-- [Gaussian Processes](api/gaussian-processes.html)
 - [Platform Guides](PLATFORMS.html)
 
 ## Mathematical Foundation

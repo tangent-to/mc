@@ -18,14 +18,7 @@ import {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma,
-  GaussianProcess,
-  Kernel,
-  RBF,
-  Matern32,
-  Matern52,
-  Periodic,
-  Linear
+  Gamma
 } from './distributions/index.js';
 
 import {
@@ -73,14 +66,7 @@ export {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma,
-  GaussianProcess,
-  Kernel,
-  RBF,
-  Matern32,
-  Matern52,
-  Periodic,
-  Linear
+  Gamma
 };
 export { MetropolisHastings, HamiltonianMC, NUTS };
 export {
@@ -119,17 +105,7 @@ export const distributions = {
   Uniform,
   Bernoulli,
   Beta,
-  Gamma,
-  GaussianProcess
-};
-
-export const kernels = {
-  Kernel,
-  RBF,
-  Matern32,
-  Matern52,
-  Periodic,
-  Linear
+  Gamma
 };
 
 export const samplers = {
@@ -171,7 +147,6 @@ export const plot = {
 export default {
   Model,
   distributions,
-  kernels,
   samplers,
   diagnostics,
   io,

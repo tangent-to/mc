@@ -7,7 +7,6 @@
 import mc, {
   Model,
   distributions,
-  kernels,
   samplers,
   diagnostics,
   io,
@@ -17,19 +16,14 @@ import mc, {
   Beta,
   Gamma,
   Bernoulli,
-  RBF,
-  GaussianProcess,
   MetropolisHastings,
   HamiltonianMC,
-  NUTS,
-  Kernel
+  NUTS
 } from '../src/index.js';
 
 describe('Namespaced exports', () => {
   test('named namespaces are objects with the expected members', () => {
     expect(distributions.Normal).toBe(Normal);
-    expect(kernels.RBF).toBe(RBF);
-    expect(kernels.Kernel).toBe(Kernel);
     expect(samplers.MetropolisHastings).toBe(MetropolisHastings);
     expect(typeof diagnostics.summarize).toBe('function');
     expect(typeof io.exportTraceForBrowser).toBe('function');
@@ -39,7 +33,6 @@ describe('Namespaced exports', () => {
   test('default export bundles every namespace', () => {
     expect(mc.Model).toBe(Model);
     expect(mc.distributions.Normal).toBe(Normal);
-    expect(mc.kernels.RBF).toBe(RBF);
     expect(mc.samplers.NUTS).toBe(NUTS);
     expect(mc.diagnostics).toBe(diagnostics);
     expect(mc.io).toBe(io);
@@ -81,22 +74,6 @@ describe('Options-object constructors for distributions', () => {
   });
 });
 
-describe('Options-object constructors for kernels', () => {
-  test('RBF accepts { lengthScale, variance } and exposes both casings', () => {
-    const k = new RBF({ lengthScale: 2, variance: 3 });
-    expect(k.lengthScale).toBe(2);
-    expect(k.lengthscale).toBe(2);
-    expect(k.variance).toBe(3);
-    expect(k.getParams()).toEqual({ lengthScale: 2, variance: 3 });
-  });
-
-  test('kernels extend the Kernel base class and expose call()', () => {
-    const k = new RBF(1, 1);
-    expect(k).toBeInstanceOf(Kernel);
-    expect(typeof k.call).toBe('function');
-  });
-});
-
 describe('Options-object constructors for samplers', () => {
   test('MetropolisHastings accepts { proposalStd }', () => {
     const s = new MetropolisHastings({ proposalStd: 0.5 });
@@ -128,20 +105,9 @@ describe('Options-object constructors for samplers', () => {
   });
 });
 
-describe('Model and GaussianProcess options', () => {
+describe('Model options', () => {
   test('Model accepts { name }', () => {
     const m = new Model({ name: 'my_model' });
     expect(m.name).toBe('my_model');
-  });
-
-  test('GaussianProcess accepts { kernel, noiseVariance } and reports isFitted', () => {
-    const gp = new GaussianProcess({ kernel: new RBF({ lengthScale: 1, variance: 1 }), noiseVariance: 0.1 });
-    expect(gp.noiseVariance).toBe(0.1);
-    expect(gp.isFitted()).toBe(false);
-    gp.fit([[0], [1], [2]], [0, 1, 2]);
-    expect(gp.isFitted()).toBe(true);
-    const out = gp.predict([[0.5]], { returnStd: true });
-    expect(out.mean).toBeDefined();
-    expect(out.std).toBeDefined();
   });
 });

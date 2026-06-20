@@ -10,9 +10,9 @@ MC brings the power of Bayesian statistical modeling to JavaScript, providing an
 
 MC follows the same API conventions as its sibling data-science package [`@tangent.to/ds`](https://github.com/tangent-to/ds):
 
-- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `kernels`, `samplers`, `diagnostics`, `io`, and `plot`.
+- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `samplers`, `diagnostics`, `io`, and `plot`.
 - **Options-object constructors.** Every configurable class accepts a single options object in addition to positional arguments, e.g. `new Normal({ mean: 0, sd: 1 })` or `new MetropolisHastings({ proposalStd: 0.5 })`. Positional forms continue to work.
-- **Introspection.** Distributions, kernels, and samplers expose `getParams()`; kernels also support `setParams()` and a `call()` alias for `compute()`.
+- **Introspection.** Distributions and samplers expose `getParams()`.
 
 ### Key Features
 
@@ -20,7 +20,6 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 - **TensorFlow.js integration**: Automatic differentiation for gradient-based samplers
 - **Multiple MCMC samplers**: Metropolis-Hastings and Hamiltonian Monte Carlo
 - **Rich distribution library**: Normal, Uniform, Beta, Gamma, Bernoulli, and more
-- **Gaussian Processes**: Non-parametric regression with multiple kernel functions (RBF, Matérn, Periodic)
 - **Posterior predictions**: Generate predictions with uncertainty from MCMC samples
 - **Model persistence**: Save and load traces and model configurations to JSON
 - **Trace analysis utilities**: Summary statistics, effective sample size, convergence diagnostics
@@ -109,7 +108,7 @@ const model = new mc.Model({ name: 'linear_regression' });
 model.addVariable('alpha', new mc.distributions.Normal({ mean: 0, sd: 10, name: 'alpha' }));
 
 const sampler = new mc.samplers.MetropolisHastings({ proposalStd: 0.5 });
-// mc.kernels, mc.diagnostics, mc.io, mc.plot are also available
+// mc.diagnostics, mc.io, mc.plot are also available
 ```
 
 ## Core Concepts
@@ -154,35 +153,6 @@ All distributions support:
 - `mean()` - Get the distribution mean
 - `variance()` - Get the distribution variance
 - `getParams()` - Get the distribution's parameters as a plain object
-
-### Gaussian Processes
-
-JSMC includes a full implementation of Gaussian Processes for non-parametric regression:
-
-```javascript
-import { GaussianProcess, RBF, Matern32 } from '@tangent.to/mc';
-
-// Create GP with RBF kernel (options-object form; positional args also work)
-const kernel = new RBF({ lengthScale: 1.0, variance: 1.0 });
-const gp = new GaussianProcess({ mean: 0, kernel, noiseVariance: 0.01 });
-
-// Fit to data
-gp.fit(X_train, y_train);
-
-// Make predictions
-const predictions = gp.predict(X_test, { returnStd: true });
-// Returns: { mean: [...], std: [...] }
-
-// Sample functions from posterior
-const posteriorSamples = gp.samplePosterior(X_test, 5);
-```
-
-**Available Kernels**:
-- **RBF** (Squared Exponential): Smooth, infinitely differentiable functions
-- **Matern32**: Less smooth than RBF, once differentiable
-- **Matern52**: Middle ground between Matern32 and RBF
-- **Periodic**: For periodic/seasonal patterns
-- **Linear**: For linear trends
 
 ### Model Predictions
 
@@ -302,13 +272,6 @@ node examples/hierarchical_model.js
 ```
 
 Multilevel model with partial pooling across groups, showcasing complex DAG structures.
-
-### Gaussian Process Regression
-```bash
-node examples/gaussian_process.js
-```
-
-Non-parametric regression using Gaussian Processes with different kernels and uncertainty quantification.
 
 ## API Reference
 
@@ -455,16 +418,13 @@ Apache-2.0
 ## Roadmap
 
 **Completed in v0.2.0**:
-- [x] Gaussian Processes with multiple kernels
 - [x] Posterior predictive sampling
 - [x] Model persistence (save/load)
 - [x] Browser/Observable support
 
 **Planned**:
 - [ ] Additional distributions (Poisson, Student-t, Exponential)
-- [ ] NUTS (No-U-Turn Sampler)
 - [ ] Variational inference (ADVI)
-- [ ] Sparse GPs (inducing points for large datasets)
 - [ ] Model comparison utilities (WAIC, LOO)
 - [ ] Trace visualization tools
 - [ ] PyMC model import/export
@@ -481,7 +441,6 @@ Apache-2.0
 - [TensorFlow.js](https://www.tensorflow.org/js)
 - [Bayesian Data Analysis (Gelman et al.)](http://www.stat.columbia.edu/~gelman/book/)
 - [MCMC sampling for dummies](https://twiecki.io/blog/2015/11/10/mcmc-sampling-for-dummies/)
-- [Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/)
 
 ## Citation
 

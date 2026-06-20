@@ -7,7 +7,7 @@
  * PyMC results are pre-computed and stored as expected values.
  */
 
-import { Model, Normal, Uniform, GaussianProcess, RBF, MetropolisHastings } from '../src/index.js';
+import { Model, Normal, Uniform, MetropolisHastings } from '../src/index.js';
 import { exportTraceForBrowser, importTraceFromJSON } from '../src/utils/persistence.js';
 import * as tf from '@tensorflow/tfjs-node';
 
@@ -133,69 +133,8 @@ console.log('---------------------------------------------------');
 
 console.log('\n');
 
-// Test 2: Gaussian Process Regression
-console.log('Test 2: Gaussian Process Regression');
-console.log('-------------------------------------');
-
-{
-  // Generate data from sin function
-  const X_train = [];
-  const y_train = [];
-
-  for (let i = 0; i < 20; i++) {
-    const x = (i / 20) * 10 - 5;
-    const y = Math.sin(x) + (Math.random() - 0.5) * 0.2;
-    X_train.push([x]);
-    y_train.push(y);
-  }
-
-  // Fit GP
-  const kernel = new RBF(1.0, 1.0);
-  const gp = new GaussianProcess(0, kernel, 0.05);
-  gp.fit(X_train, y_train);
-
-  // Make predictions
-  const X_test = [[0], [Math.PI / 2], [Math.PI]];
-  const predictions = gp.predict(X_test, true);
-
-  console.log('\nJSMC GP Predictions:');
-  console.log(`  f(0)      = ${predictions.mean[0].toFixed(4)} ± ${predictions.std[0].toFixed(4)}`);
-  console.log(`  f(π/2)    = ${predictions.mean[1].toFixed(4)} ± ${predictions.std[1].toFixed(4)}`);
-  console.log(`  f(π)      = ${predictions.mean[2].toFixed(4)} ± ${predictions.std[2].toFixed(4)}`);
-
-  console.log('\nExpected (sin function):');
-  console.log(`  sin(0)    = 0.0000`);
-  console.log(`  sin(π/2)  = 1.0000`);
-  console.log(`  sin(π)    = 0.0000`);
-
-  console.log('\nComparison:');
-  totalTests += 3;
-  if (assertClose(predictions.mean[0], Math.sin(0), 0.3, 'GP at x=0')) passedTests++;
-  if (assertClose(predictions.mean[1], Math.sin(Math.PI / 2), 0.3, 'GP at x=π/2')) passedTests++;
-  if (assertClose(predictions.mean[2], Math.sin(Math.PI), 0.3, 'GP at x=π')) passedTests++;
-
-  // Check uncertainty quantification
-  console.log('\nUncertainty checks:');
-  totalTests += 2;
-  if (predictions.std[0] > 0 && predictions.std[0] < 1) {
-    console.log('  PASS: Reasonable uncertainty at x=0');
-    passedTests++;
-  } else {
-    console.log('  FAIL: Unreasonable uncertainty at x=0');
-  }
-
-  if (predictions.std.every(s => s > 0)) {
-    console.log('  PASS: All uncertainties > 0');
-    passedTests++;
-  } else {
-    console.log('  FAIL: Some uncertainties <= 0');
-  }
-}
-
-console.log('\n');
-
-// Test 3: Posterior Predictive Checks
-console.log('Test 3: Posterior Predictive Sampling');
+// Test 2: Posterior Predictive Checks
+console.log('Test 2: Posterior Predictive Sampling');
 console.log('---------------------------------------');
 
 {
@@ -247,8 +186,8 @@ console.log('---------------------------------------');
 
 console.log('\n');
 
-// Test 4: Model Persistence
-console.log('Test 4: Model Persistence');
+// Test 3: Model Persistence
+console.log('Test 3: Model Persistence');
 console.log('-------------------------');
 
 {
