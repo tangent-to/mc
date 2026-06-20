@@ -4,6 +4,27 @@ import { Distribution, isOptions } from './base.js';
 import { RBF } from './kernels.js';
 
 /**
+ * Average a square matrix with its transpose, in place, to remove the tiny
+ * off-diagonal asymmetry that floating-point kernel/covariance computations
+ * introduce (matMul does not guarantee K[i][j] === K[j][i] to the last bit).
+ * ml-matrix's CholeskyDecomposition requires exact symmetry, so this must be
+ * applied before decomposing.
+ * @param {Matrix} M - Square matrix (modified in place)
+ * @returns {Matrix} The same matrix, now exactly symmetric
+ */
+function symmetrize(M) {
+  const n = M.rows;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const avg = (M.get(i, j) + M.get(j, i)) / 2;
+      M.set(i, j, avg);
+      M.set(j, i, avg);
+    }
+  }
+  return M;
+}
+
+/**
  * Gaussian Process distribution
  *
  * Represents a distribution over functions, defined by a mean function and covariance (kernel) function.
@@ -92,6 +113,7 @@ export class GaussianProcess extends Distribution {
     for (let i = 0; i < n; i++) {
       K.set(i, i, K.get(i, i) + this.noiseVariance);
     }
+    symmetrize(K);
 
     // Cholesky decomposition
     try {
@@ -278,6 +300,7 @@ export class GaussianProcess extends Distribution {
       const v_squared_sum = v.reduce((sum, val) => sum + val * val, 0);
       cov.set(i, i, cov.get(i, i) - v_squared_sum + 1e-6); // Add jitter
     }
+    symmetrize(cov);
 
     // Cholesky of posterior covariance
     let L_post;
@@ -375,10 +398,11 @@ export class GaussianProcess extends Distribution {
     K_tf.dispose();
     X_tensor.dispose();
 
-    const K = Matrix.from(K_array);
+    const K = new Matrix(K_array);
     for (let i = 0; i < n; i++) {
       K.set(i, i, K.get(i, i) + 1e-6); // Add jitter
     }
+    symmetrize(K);
 
     // Cholesky decomposition
     const chol = new CholeskyDecomposition(K);
