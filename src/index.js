@@ -60,8 +60,7 @@ import {
   autocorrPlot,
   pairPlot,
   forestPlot,
-  rankPlot,
-  energyPlot
+  rankPlot
 } from './utils/visualize.js';
 
 // ---------------------------------------------------------------------------
@@ -108,8 +107,7 @@ export {
   autocorrPlot,
   pairPlot,
   forestPlot,
-  rankPlot,
-  energyPlot
+  rankPlot
 };
 
 // ---------------------------------------------------------------------------
@@ -166,8 +164,7 @@ export const plot = {
   autocorrPlot,
   pairPlot,
   forestPlot,
-  rankPlot,
-  energyPlot
+  rankPlot
 };
 
 // Default export: the whole library grouped by namespace

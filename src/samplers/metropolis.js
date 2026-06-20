@@ -1,6 +1,6 @@
-import * as tf from '@tensorflow/tfjs-node';
 import jstat from 'jstat';
 import { isOptions } from '../distributions/base.js';
+import { initTrace, recordSample } from './_shared.js';
 
 /**
  * Metropolis-Hastings MCMC sampler
@@ -65,13 +65,8 @@ export class MetropolisHastings {
       nSamples = o.nSamples ?? 1000;
     }
     const variableNames = model.getFreeVariableNames();
-    const trace = {};
+    const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
-
-    // Initialize trace arrays
-    for (const name of variableNames) {
-      trace[name] = [];
-    }
 
     // Current state
     let currentParams = { ...initialValues };
@@ -108,9 +103,7 @@ export class MetropolisHastings {
 
       // Store samples after burn-in and according to thinning
       if (i >= burnIn && (i - burnIn) % thin === 0) {
-        for (const name of variableNames) {
-          trace[name].push(currentParams[name]);
-        }
+        recordSample(trace, currentParams, variableNames);
       }
 
       // Progress logging

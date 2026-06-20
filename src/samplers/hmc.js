@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import { isOptions } from '../distributions/base.js';
+import { computeHamiltonian, initTrace, recordSample } from './_shared.js';
 
 /**
  * Hamiltonian Monte Carlo (HMC) sampler
@@ -123,16 +124,7 @@ export class HamiltonianMC {
    * @returns {number} Hamiltonian value
    */
   hamiltonian(position, momentum, model) {
-    const logProb = model.logProb(position).arraySync();
-    const variableNames = Object.keys(momentum);
-
-    let kineticEnergy = 0;
-    for (const name of variableNames) {
-      const p = momentum[name];
-      kineticEnergy += 0.5 * p * p;
-    }
-
-    return -logProb + kineticEnergy;
+    return computeHamiltonian(model, position, momentum);
   }
 
   /**
@@ -155,13 +147,8 @@ export class HamiltonianMC {
       nSamples = o.nSamples ?? 1000;
     }
     const variableNames = model.getFreeVariableNames();
-    const trace = {};
+    const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
-
-    // Initialize trace arrays
-    for (const name of variableNames) {
-      trace[name] = [];
-    }
 
     // Current state
     let currentParams = { ...initialValues };
@@ -205,9 +192,7 @@ export class HamiltonianMC {
 
       // Store samples after burn-in and according to thinning
       if (i >= burnIn && (i - burnIn) % thin === 0) {
-        for (const name of variableNames) {
-          trace[name].push(currentParams[name]);
-        }
+        recordSample(trace, currentParams, variableNames);
       }
 
       // Progress logging

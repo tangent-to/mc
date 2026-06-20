@@ -6,6 +6,26 @@ import { isOptions } from './base.js';
  */
 
 /**
+ * Pairwise squared Euclidean distances between two sets of points.
+ *
+ * Uses the identity ||x - x'||² = ||x||² + ||x'||² - 2·x·x'. Must be called
+ * inside a `tf.tidy` (each kernel's `compute` provides one).
+ *
+ * @param {tf.Tensor} X1 - First set of points [n1, d]
+ * @param {tf.Tensor} X2 - Second set of points [n2, d]
+ * @returns {tf.Tensor} Squared-distance matrix [n1, n2]
+ */
+function pairwiseSqDist(X1, X2) {
+  const X1_sqnorms = tf.sum(tf.square(X1), 1, true); // [n1, 1]
+  const X2_sqnorms = tf.sum(tf.square(X2), 1, true); // [n2, 1]
+  const cross = tf.matMul(X1, X2, false, true); // [n1, n2]
+  return tf.add(
+    X1_sqnorms,
+    tf.sub(tf.transpose(X2_sqnorms), tf.mul(2, cross))
+  );
+}
+
+/**
  * Abstract base class for GP kernels.
  *
  * Mirrors the kernel interface of the sibling `@tangent.to/ds` package:
@@ -107,17 +127,7 @@ export class RBF extends Kernel {
   compute(X1, X2 = null) {
     return tf.tidy(() => {
       const X2_actual = X2 === null ? X1 : X2;
-
-      // Compute squared distances: ||x - x'||²
-      // Using: ||x - x'||² = ||x||² + ||x'||² - 2*x·x'
-      const X1_sqnorms = tf.sum(tf.square(X1), 1, true); // [n1, 1]
-      const X2_sqnorms = tf.sum(tf.square(X2_actual), 1, true); // [n2, 1]
-      const cross = tf.matMul(X1, X2_actual, false, true); // [n1, n2]
-
-      const sq_dists = tf.add(
-        X1_sqnorms,
-        tf.sub(tf.transpose(X2_sqnorms), tf.mul(2, cross))
-      );
+      const sq_dists = pairwiseSqDist(X1, X2_actual);
 
       // k(x, x') = σ² * exp(-sq_dist / (2 * l²))
       const K = tf.mul(
@@ -184,16 +194,7 @@ export class Matern32 extends Kernel {
   compute(X1, X2 = null) {
     return tf.tidy(() => {
       const X2_actual = X2 === null ? X1 : X2;
-
-      // Compute distances
-      const X1_sqnorms = tf.sum(tf.square(X1), 1, true);
-      const X2_sqnorms = tf.sum(tf.square(X2_actual), 1, true);
-      const cross = tf.matMul(X1, X2_actual, false, true);
-
-      const sq_dists = tf.add(
-        X1_sqnorms,
-        tf.sub(tf.transpose(X2_sqnorms), tf.mul(2, cross))
-      );
+      const sq_dists = pairwiseSqDist(X1, X2_actual);
       const dists = tf.sqrt(tf.maximum(sq_dists, 1e-10)); // avoid sqrt(0)
 
       // Matérn 3/2: σ² * (1 + √3*r/l) * exp(-√3*r/l)
@@ -266,16 +267,7 @@ export class Matern52 extends Kernel {
   compute(X1, X2 = null) {
     return tf.tidy(() => {
       const X2_actual = X2 === null ? X1 : X2;
-
-      // Compute distances
-      const X1_sqnorms = tf.sum(tf.square(X1), 1, true);
-      const X2_sqnorms = tf.sum(tf.square(X2_actual), 1, true);
-      const cross = tf.matMul(X1, X2_actual, false, true);
-
-      const sq_dists = tf.add(
-        X1_sqnorms,
-        tf.sub(tf.transpose(X2_sqnorms), tf.mul(2, cross))
-      );
+      const sq_dists = pairwiseSqDist(X1, X2_actual);
       const dists = tf.sqrt(tf.maximum(sq_dists, 1e-10));
 
       // Matérn 5/2

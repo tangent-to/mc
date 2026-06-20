@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `package.json` now declares a `module` entry point and `import`/`default` export conditions, matching the `@tangent.to/ds` packaging convention.
 
+### Removed
+- `energyPlot`, a non-functional placeholder, has been removed from the public API.
+
+### Internal
+- Removed dead code: an unused `tf` import in the Metropolis-Hastings sampler, an unused `accept` variable (and a thrice-computed `Math.exp`) in the NUTS tree builder, an unused intermediate array in `pairPlot`, and a vestigial `shape` getter on the `Distribution` base class.
+- De-duplicated samplers and kernels: the `hamiltonian()` calculation and trace bookkeeping now live in a shared `samplers/_shared.js` helper, and the pairwise squared-distance computation shared by the RBF and Matérn kernels was extracted into a single helper. No change to sampling results.
+- Stopped tracking generated API docs (`docs/api/`) in git and removed the unreferenced `IMPROVEMENTS.md`.
+
 ## [0.2.0] - 2025-11-06
 
 ### Added

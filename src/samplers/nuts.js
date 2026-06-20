@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import { isOptions } from '../distributions/base.js';
+import { computeHamiltonian, initTrace, recordSample } from './_shared.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -129,16 +130,7 @@ export class NUTS {
    * @returns {number} Hamiltonian value
    */
   hamiltonian(position, momentum, model) {
-    const logProb = model.logProb(position).arraySync();
-    const variableNames = Object.keys(momentum);
-
-    let kineticEnergy = 0;
-    for (const name of variableNames) {
-      const p = momentum[name];
-      kineticEnergy += 0.5 * p * p;
-    }
-
-    return -logProb + kineticEnergy;
+    return computeHamiltonian(model, position, momentum);
   }
 
   /**
@@ -192,11 +184,9 @@ export class NUTS {
 
       const H = this.hamiltonian(positionNew, momentumNew, model);
 
-      // Check if proposal is valid (energy difference not too large)
-      const valid = (slice <= Math.exp(H0 - H));
-
-      // Metropolis acceptance criterion
-      const accept = (slice <= Math.exp(H0 - H)) ? 1 : 0;
+      // Energy ratio exp(H0 - H), computed once
+      const expHDiff = Math.exp(H0 - H);
+      const valid = slice <= expHDiff;
 
       return {
         positionMinus: positionNew,
@@ -206,7 +196,7 @@ export class NUTS {
         positionPrime: positionNew,
         nValid: valid ? 1 : 0,
         stop: !valid || (H0 - H) > deltaMax,
-        alpha: Math.min(1, Math.exp(H0 - H)),
+        alpha: Math.min(1, expHDiff),
         nAlpha: 1
       };
     }
@@ -273,13 +263,8 @@ export class NUTS {
       nSamples = o.nSamples ?? 1000;
     }
     const variableNames = model.getFreeVariableNames();
-    const trace = {};
+    const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
-
-    // Initialize trace arrays
-    for (const name of variableNames) {
-      trace[name] = [];
-    }
 
     // Current state
     let currentParams = { ...initialValues };
@@ -390,9 +375,7 @@ export class NUTS {
 
       // Store samples after warmup and according to thinning
       if (i >= nWarmup && (i - nWarmup) % thin === 0) {
-        for (const name of variableNames) {
-          trace[name].push(currentParams[name]);
-        }
+        recordSample(trace, currentParams, variableNames);
       }
 
       // Progress logging

@@ -337,37 +337,8 @@ export function pairPlot(trace, variables = null, options = {}) {
     height: options.height || 800,
 
     observablePlot: (Plot) => {
-      const plots = [];
-
-      // Create grid of scatter plots
-      for (let i = 0; i < varNames.length; i++) {
-        for (let j = 0; j < varNames.length; j++) {
-          const xVar = varNames[j];
-          const yVar = varNames[i];
-
-          if (i === j) {
-            // Diagonal: histogram
-            plots.push({
-              x: i,
-              y: j,
-              type: 'histogram',
-              variable: xVar
-            });
-          } else {
-            // Off-diagonal: scatter
-            plots.push({
-              x: i,
-              y: j,
-              type: 'scatter',
-              xVar: xVar,
-              yVar: yVar
-            });
-          }
-        }
-      }
-
-      // Note: Full pair plot implementation requires more complex layout
-      // This is a simplified version - full implementation would use facets
+      // Simplified scatter-plot matrix: histograms on the diagonal,
+      // pairwise scatter plots off-diagonal.
       return Plot.plot({
         title: spec.title,
         width: spec.width,
@@ -590,45 +561,6 @@ export function rankPlot(trace, variables = null, options = {}) {
         data: this.data,
         variables: this.variables,
         type: this.type
-      };
-    }
-  };
-
-  return spec;
-}
-
-/**
- * Generate energy plot specification (for HMC/NUTS diagnostics)
- * Compares the distribution of energy transitions
- *
- * @param {Object} trace - MCMC trace object with energy information
- * @param {Object} options - Plot options
- * @returns {Object} Plot specification with .show() method
- */
-export function energyPlot(trace, options = {}) {
-  // Energy plot requires energy information from HMC/NUTS
-  // This is a placeholder - full implementation would need energy tracking
-
-  const spec = {
-    type: 'energy',
-    data: [],
-    title: options.title || 'Energy Plot',
-    width: options.width || 600,
-    height: options.height || 400,
-
-    observablePlot: (Plot) => {
-      return Plot.plot({
-        title: 'Energy plot requires HMC/NUTS energy information',
-        marks: []
-      });
-    },
-
-    show(plotLib) {
-      console.warn('Energy plot requires energy transition information from HMC/NUTS sampler');
-      return {
-        data: this.data,
-        type: this.type,
-        note: 'Not yet implemented - requires energy tracking in samplers'
       };
     }
   };

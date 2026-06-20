@@ -78,11 +78,4 @@ export class Distribution {
   getParams() {
     return {};
   }
-
-  /**
-   * Get the shape of the distribution
-   */
-  get shape() {
-    return this._shape || [];
-  }
 }
