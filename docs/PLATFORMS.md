@@ -1,20 +1,20 @@
 # Platform Support: Observable, Deno, and Jupyter
 
-JSMC is designed to work across multiple JavaScript/TypeScript platforms. This guide covers the three primary use cases.
+mc is designed to work across multiple JavaScript/TypeScript platforms. This guide covers the three primary use cases.
 
 ## Priority 1: ObservableHQ
 
-Observable is the primary target platform for JSMC, enabling interactive Bayesian data analysis in the browser.
+Observable is the primary target platform for mc, enabling interactive Bayesian data analysis in the browser.
 
 ### Quick Start
 
 ```javascript
-// Import JSMC
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc@0.2.0/src/browser.js")
+// Import mc
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 
 // Use it
 {
-  const { Model, Normal, MetropolisHastings } = jsmc;
+  const { Model, Normal, MetropolisHastings } = mc;
   // Define your model...
 }
 ```
@@ -23,7 +23,7 @@ jsmc = import("https://cdn.jsdelivr.net/npm/jsmc@0.2.0/src/browser.js")
 
 ```javascript
 // Cell 1: Import
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 
 // Cell 2: Generate data
 data = {
@@ -35,7 +35,7 @@ data = {
 
 // Cell 3: Run MCMC
 trace = {
-  const { Model, Normal, Uniform, MetropolisHastings } = jsmc;
+  const { Model, Normal, Uniform, MetropolisHastings } = mc;
 
   const model = new Model('regression');
   model.addVariable('alpha', new Normal(0, 10));
@@ -66,12 +66,11 @@ Plot.plot({
 2. **Sample Counts**: Use fewer samples than in Node.js (500-1000 vs 5000)
 3. **Reactivity**: Cache expensive MCMC runs in separate cells
 4. **Visualization**: Use Observable Plot for trace plots and posteriors
-5. **Download Results**: Use `exportTraceForBrowser()` to download JSON
+5. **Download Results**: Use `traceToJSON()` to serialize, then download
 
 ### Performance
 
 - Linear regression: ~1000 samples/minute
-- GP regression: ~100 samples/minute (for 50 training points)
 - Browser can handle models with up to ~10 parameters efficiently
 
 See **[docs/OBSERVABLE.md](OBSERVABLE.md)** for comprehensive examples.
@@ -82,14 +81,14 @@ Deno provides a modern TypeScript/JavaScript runtime with excellent developer ex
 
 ### Setup
 
-JSMC works with Deno using npm specifiers:
+mc works with Deno using npm specifiers:
 
 ```typescript
 // Import from npm
-import { Model, Normal, MetropolisHastings } from "npm:jsmc@0.2.0";
+import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
-// Or use JSR when published
-// import { Model, Normal, MetropolisHastings } from "jsr:@jsmc/jsmc";
+// Or use JSR
+// import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc";
 ```
 
 ### Example in Deno REPL
@@ -98,7 +97,7 @@ import { Model, Normal, MetropolisHastings } from "npm:jsmc@0.2.0";
 // Start Deno REPL
 // deno
 
-import { Model, Normal, Uniform, MetropolisHastings } from "npm:jsmc";
+import { Model, Normal, Uniform, MetropolisHastings } from "npm:@tangent.to/mc";
 
 // Generate data
 const x = Array.from({length: 50}, () => Math.random() * 10);
@@ -128,14 +127,14 @@ console.log('beta:', trace.trace.beta.reduce((a,b) => a+b) / trace.trace.beta.le
 ### Deno Compatibility Notes
 
 **Works out of the box**:
-- All JSMC functionality
+- All mc functionality
 - npm imports via `npm:` specifier
 - TensorFlow.js support
 - TypeScript types (if provided)
 
 **Considerations**:
-- Use `npm:jsmc` not `./src/index.js` (no local imports without deno.json)
-- TensorFlow.js backend: Uses regular tfjs, not tfjs-node
+- Use `npm:@tangent.to/mc` not `./src/index.js` (no local imports without deno.json)
+- TensorFlow.js: `@tensorflow/tfjs` is a peer dependency, resolved automatically via the `npm:` specifier; mc re-exports the shared instance as `tf`
 - Performance: Similar to Node.js for most operations
 - File I/O: Use Deno's built-in APIs, not Node.js `fs`
 
@@ -151,7 +150,7 @@ In Zed with Deno REPL:
 ```typescript
 // example.ts in Zed
 
-import { Model, Normal } from "npm:jsmc";
+import { Model, Normal } from "npm:@tangent.to/mc";
 
 const model = new Model('test');
 model.addVariable('mu', new Normal(0, 1));
@@ -167,7 +166,7 @@ Create a standalone Deno script:
 
 ```typescript
 // analysis.ts
-import { Model, Normal, MetropolisHastings, printSummary } from "npm:jsmc";
+import { Model, Normal, MetropolisHastings, printSummary } from "npm:@tangent.to/mc";
 
 async function main() {
   const model = new Model('analysis');
@@ -195,7 +194,7 @@ deno run --allow-write analysis.ts
 
 ## Priority 3: Jupyter Lab (Node.js Kernel)
 
-Use JSMC in Jupyter notebooks with the IJavascript kernel for literate programming and reproducible research.
+Use mc in Jupyter notebooks with the IJavascript kernel for literate programming and reproducible research.
 
 ### Setup
 
@@ -205,9 +204,9 @@ npm install -g ijavascript
 ijsinstall
 ```
 
-2. Install JSMC:
+2. Install mc:
 ```bash
-npm install jsmc
+npm install @tangent.to/mc @tensorflow/tfjs
 ```
 
 3. Start Jupyter:
@@ -221,8 +220,8 @@ jupyter lab
 
 ```javascript
 // Cell 1: Import
-const jsmc = await import('jsmc');
-const { Model, Normal, Uniform, MetropolisHastings, printSummary } = jsmc;
+const mc = await import('@tangent.to/mc');
+const { Model, Normal, Uniform, MetropolisHastings, printSummary } = mc;
 
 // Cell 2: Generate synthetic data
 const n = 100;
@@ -282,9 +281,9 @@ console.log(`Prediction at x=${x_new}:`);
 console.log(`  Mean: ${predictions.mean.toFixed(2)}`);
 console.log(`  95% CI: [${predictions.lower.toFixed(2)}, ${predictions.upper.toFixed(2)}]`);
 
-// Cell 7: Save results
-const fs = await import('fs');
-fs.writeFileSync('trace.json', JSON.stringify(trace, null, 2));
+// Cell 7: Save results (Node-only persistence subpath)
+const { saveTrace } = await import('@tangent.to/mc/persistence');
+saveTrace(trace, 'trace.json');
 console.log('Results saved to trace.json');
 ```
 
@@ -376,31 +375,31 @@ plt.show()
 
 ### Observable
 ```javascript
-import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js")
+import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ### Deno
 ```typescript
-import { ... } from "npm:jsmc";
+import { ... } from "npm:@tangent.to/mc";
 ```
 
 ### Node.js/Jupyter
 ```bash
-npm install jsmc
+npm install @tangent.to/mc @tensorflow/tfjs
 ```
 ```javascript
-import { ... } from 'jsmc';
+import { ... } from '@tangent.to/mc';
 ```
 
 ## Performance Guidelines
 
 ### Sample Recommendations by Platform
 
-| Platform | Simple Model | GP Model | Hierarchical |
-|----------|--------------|----------|--------------|
-| Observable | 500-1000 | 200-500 | 1000-2000 |
-| Deno | 2000-5000 | 500-1000 | 2000-5000 |
-| Jupyter | 2000-5000 | 500-1000 | 2000-5000 |
+| Platform | Simple Model | Hierarchical |
+|----------|--------------|--------------|
+| Observable | 500-1000 | 1000-2000 |
+| Deno | 2000-5000 | 2000-5000 |
+| Jupyter | 2000-5000 | 2000-5000 |
 
 ### Memory Limits
 
@@ -421,7 +420,7 @@ import { ... } from 'jsmc';
 ### Deno Issues
 
 **Problem**: "Cannot find module"
-- **Solution**: Use `npm:jsmc` not relative path
+- **Solution**: Use `npm:@tangent.to/mc` not relative path
 
 **Problem**: Permission denied
 - **Solution**: Add `--allow-read --allow-write` flags
@@ -459,7 +458,6 @@ import { ... } from 'jsmc';
 
 ## Additional Resources
 
-- [Observable Examples](https://observablehq.com/@jsmc)
 - [Deno Manual](https://deno.land/manual)
 - [IJavascript Docs](https://github.com/n-riesco/ijavascript)
-- [JSMC API Docs](../docs/api/index.html)
+- [mc API Docs](api/index.html)

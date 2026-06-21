@@ -15,9 +15,12 @@ title: Home
 
 ### Installation
 
+`@tensorflow/tfjs` is a peer dependency (not bundled) — bundlers resolve it
+automatically, and jsDelivr's `+esm` endpoint auto-resolves it for Observable.
+
 **Node.js / npm:**
 ```bash
-npm install @tangent.to/mc
+npm install @tangent.to/mc @tensorflow/tfjs
 ```
 
 **Deno:**
@@ -27,7 +30,7 @@ import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc";
 
 **Observable:**
 ```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ## Features

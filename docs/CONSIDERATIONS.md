@@ -1,41 +1,41 @@
-# Additional Considerations for JSMC
+# Additional Considerations for mc
 
-This document covers important considerations, best practices, limitations, and future directions for JSMC.
+This document covers important considerations, best practices, limitations, and future directions for mc.
 
 ## Architecture & Design Decisions
 
 ### Why TensorFlow.js?
 
-JSMC uses TensorFlow.js as its computational backend for several key reasons:
+mc uses TensorFlow.js as its computational backend for several key reasons:
 
-1. **Automatic Differentiation**: Essential for gradient-based samplers like HMC
-2. **Cross-Platform**: Works in Node.js and browsers
-3. **GPU Acceleration**: Optional WebGL backend for faster computation
-4. **Mature Ecosystem**: Well-tested, widely adopted library
+1. **Automatic Differentiation**: Essential for gradient-based samplers like HMC and NUTS
+2. **Tensor Operations**: Efficient vectorized math for likelihoods and samplers
+3. **Mature Ecosystem**: Well-tested, widely adopted library
+
+TensorFlow.js (`@tensorflow/tfjs`) is a peer dependency, not bundled. mc ships a single browser-first build that runs on the tfjs CPU/WebGL backend everywhere.
 
 ### Why Not Pure JavaScript?
 
 While pure JavaScript would have fewer dependencies, it would require:
 - Manual gradient computation (error-prone and slow)
 - Custom linear algebra implementations
-- No GPU acceleration
 - Significantly more development time
 
 The trade-off is worth it for the performance and reliability TensorFlow.js provides.
 
 ### PyMC Comparison
 
-| Feature | PyMC | JSMC | Notes |
+| Feature | PyMC | mc | Notes |
 |---------|------|------|-------|
-| Language | Python | JavaScript | JSMC brings Bayesian inference to JS ecosystem |
+| Language | Python | JavaScript | mc brings Bayesian inference to JS ecosystem |
 | Backend | Aesara/JAX | TensorFlow.js | Both support autodiff |
 | DAG Structure | Yes | Yes | Core feature for both |
-| MCMC Samplers | NUTS, HMC, MH, etc. | HMC, MH | JSMC has fewer samplers currently |
+| MCMC Samplers | NUTS, HMC, MH, etc. | HMC, MH | mc has fewer samplers currently |
 | Variational Inference | Yes | Planned | Major feature gap |
 | Model Comparison | WAIC, LOO | Planned | Important for model selection |
 | Visualization | ArviZ | External tools | Observable, D3.js recommended |
 | Performance | High (JAX/C++) | Medium (JS/WASM) | ~2-5x slower typically |
-| Browser Support | No | Yes | JSMC's key advantage |
+| Browser Support | No | Yes | mc's key advantage |
 
 ## Performance Considerations
 
@@ -51,7 +51,7 @@ Typical performance on a modern CPU:
 1. **Use HMC for high-dimensional problems**: More efficient than MH
 2. **Batch operations**: Process multiple chains in parallel if needed
 3. **Reduce model complexity**: Simplify likelihood functions
-4. **Use GPU**: Enable WebGL backend in browser
+4. **Use the WebGL backend**: Faster than CPU for larger tensor ops
 5. **Tune sampler parameters**: Proper step size and proposal std make a huge difference
 
 ### Memory Management
@@ -72,17 +72,7 @@ const y = tf.square(x);
 // x and y are never disposed!
 ```
 
-JSMC handles this internally for most operations, but be careful with custom likelihood functions.
-
-### Browser vs Node.js
-
-| Aspect | Browser | Node.js |
-|--------|---------|---------|
-| Speed | Slower | Faster |
-| Memory | Limited | More available |
-| GPU | WebGL | CUDA (via tfjs-node-gpu) |
-| Use Case | Interactive exploration | Production inference |
-| Best For | Visualization, teaching | Large-scale modeling |
+mc handles this internally for most operations, but be careful with custom likelihood functions.
 
 ## Limitations & Known Issues
 
@@ -93,34 +83,28 @@ JSMC handles this internally for most operations, but be careful with custom lik
 3. **No variational inference**: ADVI and other VI methods not available
 4. **Single-chain diagnostics**: Multi-chain R-hat requires manual implementation
 5. **No model serialization**: Can't save/load model structure (only traces)
-6. **No sparse matrix support**: GPs become slow with >1000 data points
 
 ### Performance Bottlenecks
 
-1. **GP Cholesky decomposition**: O(n³) - slow for large datasets
-   - **Workaround**: Use inducing points (sparse GPs) - planned feature
-2. **HMC gradient computation**: Can be slow for complex models
+1. **HMC gradient computation**: Can be slow for complex models
    - **Workaround**: Use simpler models or MH
-3. **JavaScript overhead**: ~2-5x slower than compiled languages
+2. **JavaScript overhead**: ~2-5x slower than compiled languages
    - **Workaround**: Use WebAssembly backend (experimental)
 
 ### Numerical Stability
 
-JSMC includes safeguards for numerical stability:
+mc includes safeguards for numerical stability:
 
-- **Cholesky jitter**: Small diagonal term (1e-6) added to prevent singular matrices
 - **Log-space computations**: Probabilities computed in log space to avoid underflow
 - **Gradient clipping**: Optional for HMC to prevent explosions
 
 However, you may still encounter issues with:
 - Very small/large parameter values
-- Poorly conditioned covariance matrices
 - Extreme likelihood ratios
 
 **Solutions**:
 - Scale your data (standardize inputs)
 - Use informative priors to constrain parameters
-- Increase jitter if encountering Cholesky errors
 
 ## Best Practices
 
@@ -203,7 +187,6 @@ function doEverything() {
 - [ ] Automatic sampler tuning
 - [ ] Built-in visualization utilities
 - [ ] TypeScript definitions
-- [ ] More kernel functions for GPs
 
 **Low Priority**:
 - [ ] Custom distributions via class extension
@@ -221,15 +204,15 @@ We welcome contributions! Priority areas:
 4. **Benchmarks**: Compare performance with other libraries
 5. **Observable notebooks**: Interactive examples
 
-## When NOT to Use JSMC
+## When NOT to Use mc
 
-JSMC may not be the best choice if you need:
+mc may not be the best choice if you need:
 
 1. **Production-scale inference**: Use PyMC, Stan, or JAX
 2. **Real-time inference**: MCMC is too slow
 3. **Deep learning integration**: Use PyTorch/TensorFlow directly
 4. **Complex time series**: Specialized libraries (Prophet, statsmodels) are better
-5. **Massive datasets**: JSMC doesn't scale beyond ~10k observations
+5. **Massive datasets**: mc doesn't scale beyond ~10k observations
 
 **Alternatives**:
 - **PyMC**: Most feature-complete Bayesian library (Python)
@@ -258,7 +241,7 @@ When saving/loading models:
 ### Browser Security
 
 In Observable or other browser environments:
-- JSMC runs client-side (no server execution)
+- mc runs client-side (no server execution)
 - Data stays in the browser (privacy-friendly)
 - Be mindful of CORS when loading external data
 - Large computations may freeze the browser
@@ -285,25 +268,25 @@ In Observable or other browser environments:
 
 ## Support & Community
 
-- **GitHub Issues**: [github.com/essicolo/jsmc/issues](https://github.com/essicolo/jsmc/issues)
+- **GitHub Issues**: [github.com/tangent-to/mc/issues](https://github.com/tangent-to/mc/issues)
 - **Discussions**: Use GitHub Discussions for questions
 - **Examples**: Check the `examples/` directory
 - **Observable**: Share your notebooks!
 
 ## License
 
-JSMC is licensed under Apache-2.0, same as TensorFlow.
+mc is licensed under Apache-2.0, same as TensorFlow.
 
 ## Citation
 
-If you use JSMC in research, please cite:
+If you use mc in research, please cite:
 
 ```bibtex
-@software{jsmc2025,
-  title = {JSMC: JavaScript Markov Chain Monte Carlo},
+@software{mc2025,
+  title = {mc: JavaScript Markov Chain Monte Carlo},
   author = {},
   year = {2025},
-  url = {https://github.com/essicolo/jsmc},
+  url = {https://github.com/tangent-to/mc},
   note = {A PyMC-inspired probabilistic programming library for JavaScript}
 }
 ```

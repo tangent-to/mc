@@ -149,7 +149,7 @@ const sampler = new mc.samplers.MetropolisHastings({ proposalStd: 0.5 });
 
 ### Models as DAGs
 
-Like PyMC, JSMC uses a Directed Acyclic Graph (DAG) structure to represent probabilistic models. Variables can depend on other variables, creating a natural flow from priors through transformations to likelihoods:
+Like PyMC, mc uses a Directed Acyclic Graph (DAG) structure to represent probabilistic models. Variables can depend on other variables, creating a natural flow from priors through transformations to likelihoods:
 
 ```javascript
 // Hyperpriors
@@ -165,7 +165,7 @@ const y = new Normal(mu_group, sigma_obs);
 
 ### Distributions
 
-JSMC provides a rich set of probability distributions:
+mc provides a rich set of probability distributions:
 
 Each constructor accepts positional arguments or an options object (shown second).
 
@@ -269,7 +269,7 @@ const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 
 ### Trace Analysis
 
-JSMC provides utilities for analyzing MCMC samples:
+mc provides utilities for analyzing MCMC samples:
 
 ```javascript
 import { summarize, effectiveSampleSize, gelmanRubin, printSummary } from '@tangent.to/mc';
@@ -387,31 +387,32 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 **Notes for browser/Observable use**:
-- `tfjs` runs on its CPU/WebGL backend (no `@tensorflow/tfjs-node`); somewhat slower
-  than Node with the native backend, but enables interactive visualization.
+- `tfjs` runs on its CPU/WebGL backend (there is no `@tensorflow/tfjs-node` — the
+  single build uses `@tensorflow/tfjs` everywhere), which enables interactive
+  visualization.
 - File-based persistence (`saveTrace`, `loadTrace`) is Node-only (`node:fs`) and is
-  not part of the browser entry. Import it directly from
-  `@tangent.to/mc/src/utils/persistence.js` in Node if needed.
+  not part of the browser entry. Import it from the `@tangent.to/mc/persistence`
+  subpath in Node if needed; in the browser, serialize with `traceToJSON(trace)`.
 
 ## Technical Details
 
 ### Built on TensorFlow.js
 
-JSMC leverages TensorFlow.js for:
-- **Automatic differentiation**: Essential for gradient-based samplers like HMC
+mc leverages TensorFlow.js for:
+- **Automatic differentiation**: Essential for gradient-based samplers like HMC/NUTS
 - **Efficient tensor operations**: Fast computation of log probabilities
-- **GPU acceleration**: Optional GPU support for large-scale models
+- **WebGL acceleration**: GPU-backed tensor math in the browser via the WebGL backend
 
 ### Comparison with PyMC
 
-| Feature | PyMC | JSMC |
+| Feature | PyMC | mc |
 |---------|------|------|
 | Language | Python | JavaScript |
 | Backend | Aesara/JAX | TensorFlow.js |
 | DAG Structure | Yes | Yes |
 | MCMC Samplers | NUTS, HMC, MH | HMC, MH |
 | Variational Inference | Yes | Planned |
-| GPU Support | Yes | Yes (via TF.js) |
+| GPU Support | Yes | Browser only (TF.js WebGL) |
 
 ## Performance Tips
 
@@ -433,7 +434,7 @@ JSMC leverages TensorFlow.js for:
 ```bash
 # Clone repository
 git clone https://github.com/tangent-to/mc.git
-cd jsmc
+cd mc
 
 # Install dependencies
 npm install
@@ -469,7 +470,7 @@ Apache-2.0
 
 ## Documentation
 
-- **[Observable Guide](docs/OBSERVABLE.md)** - Using JSMC in ObservableHQ notebooks
+- **[Observable Guide](docs/OBSERVABLE.md)** - Using mc in ObservableHQ notebooks
 - **[Considerations](docs/CONSIDERATIONS.md)** - Best practices, limitations, and design decisions
 - **[Examples](examples/)** - Complete working examples
 
@@ -482,11 +483,11 @@ Apache-2.0
 
 ## Citation
 
-If you use JSMC in your research, please cite:
+If you use mc in your research, please cite:
 
 ```bibtex
-@software{jsmc,
-  title = {JSMC: JavaScript Markov Chain Monte Carlo},
+@software{mc,
+  title = {mc: JavaScript Markov Chain Monte Carlo},
   author = {},
   year = {2025},
   url = {https://github.com/tangent-to/mc}
