@@ -40,16 +40,10 @@ import {
   traceToCSV
 } from './utils/trace.js';
 
-import {
-  saveTrace,
-  loadTrace,
-  saveModelConfig,
-  saveModelState,
-  loadModelState,
-  saveTraceCSV,
-  exportTraceForBrowser,
-  importTraceFromJSON
-} from './utils/persistence.js';
+// Note: file-based trace persistence lives in ./utils/persistence.js (Node-only,
+// uses node:fs) and is intentionally NOT re-exported here so that this entry —
+// and the single browser build produced from it — stays browser-first. Import
+// it directly from './utils/persistence.js' in a Node context if needed.
 
 import {
   tracePlot,
@@ -74,7 +68,7 @@ export {
   Lognormal,
   HalfNormal
 };
-export { MetropolisHastings, HamiltonianMC, NUTS };
+export { MetropolisHastings, HamiltonianMC, NUTS, HMC, summary };
 export {
   summarize,
   effectiveSampleSize,
@@ -82,16 +76,6 @@ export {
   printSummary,
   traceToJSON,
   traceToCSV
-};
-export {
-  saveTrace,
-  loadTrace,
-  saveModelConfig,
-  saveModelState,
-  loadModelState,
-  saveTraceCSV,
-  exportTraceForBrowser,
-  importTraceFromJSON
 };
 export {
   tracePlot,
@@ -119,7 +103,9 @@ export const distributions = {
 export const samplers = {
   MetropolisHastings,
   HamiltonianMC,
-  NUTS
+  NUTS,
+  HMC,
+  summary
 };
 
 export const diagnostics = {
@@ -129,17 +115,6 @@ export const diagnostics = {
   printSummary,
   traceToJSON,
   traceToCSV
-};
-
-export const io = {
-  saveTrace,
-  loadTrace,
-  saveModelConfig,
-  saveModelState,
-  loadModelState,
-  saveTraceCSV,
-  exportTraceForBrowser,
-  importTraceFromJSON
 };
 
 export const plot = {
@@ -157,6 +132,5 @@ export default {
   distributions,
   samplers,
   diagnostics,
-  io,
   plot
 };
