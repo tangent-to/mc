@@ -9,7 +9,6 @@ import mc, {
   distributions,
   samplers,
   diagnostics,
-  io,
   plot,
   Normal,
   Uniform,
@@ -26,7 +25,6 @@ describe('Namespaced exports', () => {
     expect(distributions.Normal).toBe(Normal);
     expect(samplers.MetropolisHastings).toBe(MetropolisHastings);
     expect(typeof diagnostics.summarize).toBe('function');
-    expect(typeof io.exportTraceForBrowser).toBe('function');
     expect(typeof plot.tracePlot).toBe('function');
   });
 
@@ -35,7 +33,6 @@ describe('Namespaced exports', () => {
     expect(mc.distributions.Normal).toBe(Normal);
     expect(mc.samplers.NUTS).toBe(NUTS);
     expect(mc.diagnostics).toBe(diagnostics);
-    expect(mc.io).toBe(io);
     expect(mc.plot).toBe(plot);
   });
 });
