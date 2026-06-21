@@ -10,7 +10,8 @@
     ".": {
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./persistence": "./src/utils/persistence.js"
   },
   "files": [
     "src",

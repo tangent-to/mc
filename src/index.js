@@ -47,8 +47,8 @@ import {
 
 // Note: file-based trace persistence lives in ./utils/persistence.js (Node-only,
 // uses node:fs) and is intentionally NOT re-exported here so that this entry —
-// and the single browser build produced from it — stays browser-first. Import
-// it directly from './utils/persistence.js' in a Node context if needed.
+// and the single browser build produced from it — stays browser-first. Import it
+// from the '@tangent.to/mc/persistence' subpath in a Node context if needed.
 
 import {
   tracePlot,

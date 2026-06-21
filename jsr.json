@@ -2,7 +2,8 @@
   "name": "@tangent-to/mc",
   "version": "0.3.0",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./persistence": "./src/utils/persistence.js"
   },
   "publish": {
     "exclude": [

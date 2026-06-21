@@ -28,10 +28,20 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 
 ## Installation
 
+`@tangent.to/mc` ships a single browser-first build and uses
+[TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor math
+and automatic differentiation. `tfjs` is a **peer dependency** — it is *not* bundled
+into `mc`, so you load it once and share it (mixing two `tfjs` copies breaks tensor
+interop). See [Loading TensorFlow.js](#loading-tensorflowjs) below.
+
 ### Node.js / npm
 
 ```bash
-npm install @tangent.to/mc
+npm install @tangent.to/mc @tensorflow/tfjs
+```
+
+```javascript
+import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
 ```
 
 ### Deno
@@ -40,20 +50,44 @@ npm install @tangent.to/mc
 import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 ```
 
-### Observable
+### Loading TensorFlow.js
 
-```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
-```
+How you provide `tfjs` depends on whether you use a build step:
 
-Or add to your `package.json`:
+**With a bundler** (Vite, webpack, esbuild, …) — install both packages and import as
+usual; the bundler resolves `@tensorflow/tfjs` for you. Nothing else to do.
 
-```json
+**Without a build step** (plain `<script type="module">`, CDN) — bare imports don't
+resolve in the browser, so add an [import map](https://developer.mozilla.org/docs/Web/HTML/Element/script/type/importmap)
+*before* importing `mc`:
+
+```html
+<script type="importmap">
 {
-  "dependencies": {
-    "@tangent.to/mc": "^0.2.0"
+  "imports": {
+    "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/+esm"
   }
 }
+</script>
+<script type="module">
+  import { Model, Normal, MetropolisHastings } from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
+  // ... build and sample your model
+</script>
+```
+
+`mc` also re-exports the shared instance, so you can grab `tf` from `mc` itself
+instead of importing it separately:
+
+```javascript
+import { tf } from '@tangent.to/mc';
+```
+
+### Observable
+
+jsDelivr's `+esm` endpoint auto-resolves the `tfjs` dependency, so a single import works:
+
+```javascript
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ## Quick Start
@@ -175,10 +209,16 @@ const predictions = model.predictPosteriorSummary(
 
 ### Model Persistence
 
-Save and load model states and traces:
+File-based persistence is **Node-only** (`node:fs`) and is intentionally kept out of
+the browser-first main entry. Import it directly from its module in Node:
 
 ```javascript
-import { saveTrace, loadTrace, saveModelState } from '@tangent.to/mc';
+import {
+  saveTrace,
+  loadTrace,
+  saveModelState,
+  exportTraceForBrowser
+} from '@tangent.to/mc/persistence';
 
 // Save trace to JSON
 saveTrace(trace, 'trace.json');
@@ -189,7 +229,7 @@ const loadedTrace = loadTrace('trace.json');
 // Save complete model state
 saveModelState(model, trace, 'model_state.json');
 
-// Export for browser (no filesystem)
+// In the browser, serialize to a JSON string instead (no filesystem)
 const jsonString = exportTraceForBrowser(trace);
 ```
 
@@ -334,26 +374,24 @@ class NUTS {
 
 ## Browser & ObservableHQ
 
-JSMC works seamlessly in browser environments, including ObservableHQ notebooks:
+`mc` is a single browser-first build that runs the same in the browser, Node, and
+ObservableHQ — see [Installation](#installation) for loading `tfjs`. In Observable:
 
 ```javascript
-// In Observable, import from npm
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 
-// Use it!
 {
-  const { Model, Normal, MetropolisHastings } = jsmc;
+  const { Model, Normal, MetropolisHastings } = mc;
   // ... define and run your model
 }
 ```
 
-**Key differences in browser**:
-- Uses `@tensorflow/tfjs` instead of `@tensorflow/tfjs-node`
-- File I/O functions (`saveTrace`, `loadTrace`) not available
-- Use `exportTraceForBrowser()` and download as JSON instead
-- Slightly slower than Node.js, but enables interactive visualization
-
-**See [docs/OBSERVABLE.md](docs/OBSERVABLE.md) for detailed Observable examples and best practices.**
+**Notes for browser/Observable use**:
+- `tfjs` runs on its CPU/WebGL backend (no `@tensorflow/tfjs-node`); somewhat slower
+  than Node with the native backend, but enables interactive visualization.
+- File-based persistence (`saveTrace`, `loadTrace`) is Node-only (`node:fs`) and is
+  not part of the browser entry. Import it directly from
+  `@tangent.to/mc/src/utils/persistence.js` in Node if needed.
 
 ## Technical Details
 
