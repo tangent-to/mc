@@ -10,6 +10,11 @@
 //        import { distributions, samplers, diagnostics } from '@tangent.to/mc';
 //        import mc from '@tangent.to/mc';  // mc.distributions.Normal, ...
 
+// Re-export the bundled TensorFlow.js so consumers build tensors with the SAME
+// tf instance the library uses (mixing two tf copies breaks tensor interop).
+import * as tf from '@tensorflow/tfjs';
+export { tf };
+
 import { Model } from './model.js';
 
 import {
@@ -128,6 +133,7 @@ export const plot = {
 
 // Default export: the whole library grouped by namespace
 export default {
+  tf,
   Model,
   distributions,
   samplers,
