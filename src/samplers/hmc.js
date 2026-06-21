@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 import { isOptions } from '../distributions/base.js';
 import { computeHamiltonian, initTrace, recordSample } from './_shared.js';
 

@@ -1,20 +1,30 @@
 {
   "name": "@tangent.to/mc",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
-  "main": "src/index.js",
-  "module": "src/index.js",
-  "browser": "src/browser.js",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "browser": "./dist/index.js",
   "exports": {
     ".": {
-      "browser": "./src/browser.js",
-      "node": "./src/index.js",
-      "import": "./src/index.js",
-      "default": "./src/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
+    "prepare": "npm run build:browser",
+    "build:browser": "esbuild src/index.js --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/index.js --sourcemap --minify --keep-names --external:@tensorflow/tfjs",
+    "watch": "esbuild src/index.js --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/index.js --sourcemap --keep-names --external:@tensorflow/tfjs --watch",
+    "jsr:publish": "deno publish --allow-dirty",
+    "jsr:publish:dry-run": "deno publish --dry-run --allow-dirty",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=tests/.*\\.test\\.js",
     "test:pymc": "node tests/pymc-comparison.js",
@@ -43,10 +53,10 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@tensorflow/tfjs": "^4.21.0",
-    "@tensorflow/tfjs-node": "^4.21.0",
     "jstat": "^1.9.6"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "jest": "^29.7.0"
   },
   "engines": {

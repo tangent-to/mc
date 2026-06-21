@@ -9,7 +9,7 @@
 
 import { Model, Normal, Uniform, MetropolisHastings } from '../src/index.js';
 import { exportTraceForBrowser, importTraceFromJSON } from '../src/utils/persistence.js';
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 
 // Test utilities
 function assertClose(actual, expected, tolerance, name) {

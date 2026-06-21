@@ -1,6 +1,6 @@
 import { Model } from '../src/model.js';
 import { Normal, Uniform } from '../src/distributions/index.js';
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 
 describe('Model', () => {
   test('constructor creates empty model', () => {

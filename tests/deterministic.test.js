@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 import { Model, Normal, Lognormal, HalfNormal, HMC, summary } from '../src/index.js';
 
 describe('Lognormal distribution', () => {

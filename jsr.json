@@ -1,9 +1,8 @@
 {
   "name": "@tangent-to/mc",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "exports": {
-    ".": "./src/index.js",
-    "./browser": "./src/browser.js"
+    ".": "./src/index.js"
   },
   "publish": {
     "exclude": [
