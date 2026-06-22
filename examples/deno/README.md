@@ -16,9 +16,6 @@ This directory contains examples for using `@tangent.to/mc` in Deno and Zed edit
 # Linear regression
 deno run --allow-read --allow-env linear_regression.ts
 
-# Gaussian Process
-deno run --allow-read --allow-env gaussian_process.ts
-
 # Hierarchical model
 deno run --allow-read --allow-env hierarchical_model.ts
 ```
@@ -44,21 +41,7 @@ where $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
 - $\beta \sim \mathcal{N}(0, 10)$
 - $\sigma \sim \text{Uniform}(0.01, 5)$
 
-### 2. Gaussian Process (`gaussian_process.ts`)
-
-Shows GP regression with different kernels:
-- RBF kernel for smooth functions
-- Matérn 3/2 kernel for rough functions
-- Posterior predictive uncertainty
-- Model comparison via log marginal likelihood
-- Posterior sampling
-
-**Key concepts:**
-- Non-parametric regression
-- Uncertainty quantification
-- Kernel selection
-
-### 3. Hierarchical Model (`hierarchical_model.ts`)
+### 2. Hierarchical Model (`hierarchical_model.ts`)
 
 Demonstrates hierarchical (multilevel) modeling:
 - Global hyperpriors
@@ -94,13 +77,13 @@ y_i ~ N(mu_group[i], sigma)        # Observations
 All examples import from npm registry:
 
 ```javascript
-import { Model, Normal, GaussianProcess } from "npm:@tangent.to/mc@0.2.0";
+import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc@0.2.0";
 ```
 
 After JSR publication, you can also use:
 
 ```javascript
-import { Model, Normal, GaussianProcess } from "jsr:@tangent-to/mc@0.2.0";
+import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc@0.2.0";
 ```
 
 ## Tips for Zed REPL

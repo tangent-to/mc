@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+**API alignment with `@tangent.to/ds`**
+- Namespaced exports (`distributions`, `kernels`, `samplers`, `diagnostics`, `io`, `plot`) and a default export bundling every namespace, alongside the existing flat named exports.
+- Options-object constructors for every configurable class (distributions, kernels, Gaussian processes, samplers, and `Model`), e.g. `new Normal({ mean, sd })` and `new MetropolisHastings({ proposalStd })`. Positional forms remain supported.
+- Options-object form for sampler `sample()` run controls, e.g. `sample(model, init, { nSamples, burnIn, thin })`.
+- `getParams()` on distributions, kernels, and samplers; `setParams()` on kernels.
+- `Kernel` base class (now exported) with a `call()` alias for `compute()`; all kernels extend it and expose a camelCase `lengthScale` accessor (alias of `lengthscale`).
+- `pdf()` on distributions and `isFitted()` on `GaussianProcess`.
+
+### Changed
+- `package.json` now declares a `module` entry point and `import`/`default` export conditions, matching the `@tangent.to/ds` packaging convention.
+
+### Removed
+- **Gaussian Processes.** The `GaussianProcess` distribution and its GP kernels (`Kernel`, `RBF`, `Matern32`, `Matern52`, `Periodic`, `Linear`) have been removed, along with the `kernels` namespace. GP regression is an ML concern better served by `@tangent.to/ds`'s `GaussianProcessRegressor`; the `mc` implementation overlapped it, was the buggiest part of the package, and was the only consumer of the `ml-matrix` dependency (now dropped).
+- `energyPlot`, a non-functional placeholder, has been removed from the public API.
+
+### Internal
+- Removed dead code: an unused `tf` import in the Metropolis-Hastings sampler, an unused `accept` variable (and a thrice-computed `Math.exp`) in the NUTS tree builder, an unused intermediate array in `pairPlot`, and a vestigial `shape` getter on the `Distribution` base class.
+- De-duplicated samplers and kernels: the `hamiltonian()` calculation and trace bookkeeping now live in a shared `samplers/_shared.js` helper, and the pairwise squared-distance computation shared by the RBF and Matérn kernels was extracted into a single helper. No change to sampling results.
+- Stopped tracking generated API docs (`docs/api/`) in git and removed the unreferenced `IMPROVEMENTS.md`.
+
 ## [0.2.0] - 2025-11-06
 
 ### Added

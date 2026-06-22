@@ -6,13 +6,20 @@ A PyMC-inspired probabilistic programming library for Bayesian inference in Java
 
 MC brings the power of Bayesian statistical modeling to JavaScript, providing an intuitive API similar to PyMC for defining probabilistic models as Directed Acyclic Graphs (DAGs) and performing inference using Markov Chain Monte Carlo methods.
 
+### API conventions
+
+MC follows the same API conventions as its sibling data-science package [`@tangent.to/ds`](https://github.com/tangent-to/ds):
+
+- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `samplers`, `diagnostics`, `io`, and `plot`.
+- **Options-object constructors.** Every configurable class accepts a single options object in addition to positional arguments, e.g. `new Normal({ mean: 0, sd: 1 })` or `new MetropolisHastings({ proposalStd: 0.5 })`. Positional forms continue to work.
+- **Introspection.** Distributions and samplers expose `getParams()`.
+
 ### Key Features
 
 - **PyMC-like DAG structure**: Define models by connecting distributions in a directed acyclic graph
 - **TensorFlow.js integration**: Automatic differentiation for gradient-based samplers
 - **Multiple MCMC samplers**: Metropolis-Hastings and Hamiltonian Monte Carlo
 - **Rich distribution library**: Normal, Uniform, Beta, Gamma, Bernoulli, and more
-- **Gaussian Processes**: Non-parametric regression with multiple kernel functions (RBF, Matérn, Periodic)
 - **Posterior predictions**: Generate predictions with uncertainty from MCMC samples
 - **Model persistence**: Save and load traces and model configurations to JSON
 - **Trace analysis utilities**: Summary statistics, effective sample size, convergence diagnostics
@@ -21,10 +28,20 @@ MC brings the power of Bayesian statistical modeling to JavaScript, providing an
 
 ## Installation
 
+`@tangent.to/mc` ships a single browser-first build and uses
+[TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor math
+and automatic differentiation. `tfjs` is a **peer dependency** — it is *not* bundled
+into `mc`, so you load it once and share it (mixing two `tfjs` copies breaks tensor
+interop). See [Loading TensorFlow.js](#loading-tensorflowjs) below.
+
 ### Node.js / npm
 
 ```bash
-npm install @tangent.to/mc
+npm install @tangent.to/mc @tensorflow/tfjs
+```
+
+```javascript
+import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
 ```
 
 ### Deno
@@ -33,20 +50,44 @@ npm install @tangent.to/mc
 import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 ```
 
-### Observable
+### Loading TensorFlow.js
 
-```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
-```
+How you provide `tfjs` depends on whether you use a build step:
 
-Or add to your `package.json`:
+**With a bundler** (Vite, webpack, esbuild, …) — install both packages and import as
+usual; the bundler resolves `@tensorflow/tfjs` for you. Nothing else to do.
 
-```json
+**Without a build step** (plain `<script type="module">`, CDN) — bare imports don't
+resolve in the browser, so add an [import map](https://developer.mozilla.org/docs/Web/HTML/Element/script/type/importmap)
+*before* importing `mc`:
+
+```html
+<script type="importmap">
 {
-  "dependencies": {
-    "@tangent.to/mc": "^0.2.0"
+  "imports": {
+    "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/+esm"
   }
 }
+</script>
+<script type="module">
+  import { Model, Normal, MetropolisHastings } from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
+  // ... build and sample your model
+</script>
+```
+
+`mc` also re-exports the shared instance, so you can grab `tf` from `mc` itself
+instead of importing it separately:
+
+```javascript
+import { tf } from '@tangent.to/mc';
+```
+
+### Observable
+
+jsDelivr's `+esm` endpoint auto-resolves the `tfjs` dependency, so a single import works:
+
+```javascript
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ## Quick Start
@@ -57,12 +98,12 @@ Here's a simple Bayesian linear regression example:
 import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
 
 // Create model
-const model = new Model('linear_regression');
+const model = new Model({ name: 'linear_regression' });
 
-// Define priors (PyMC-like syntax)
-const alpha = new Normal(0, 10, 'alpha');
-const beta = new Normal(0, 10, 'beta');
-const sigma = new Uniform(0.01, 5, 'sigma');
+// Define priors (options-object form; positional `new Normal(0, 10, 'alpha')` also works)
+const alpha = new Normal({ mean: 0, sd: 10, name: 'alpha' });
+const beta = new Normal({ mean: 0, sd: 10, name: 'beta' });
+const sigma = new Uniform({ min: 0.01, max: 5, name: 'sigma' });
 
 model.addVariable('alpha', alpha);
 model.addVariable('beta', beta);
@@ -84,19 +125,31 @@ model.logProb = function(params) {
   return logProb;
 };
 
-// Run MCMC sampling
-const sampler = new MetropolisHastings(0.5);
-const trace = sampler.sample(model, initialValues, 1000, 500, 1);
+// Run MCMC sampling (options-object form; positional args also work)
+const sampler = new MetropolisHastings({ proposalStd: 0.5 });
+const trace = sampler.sample(model, initialValues, { nSamples: 1000, burnIn: 500, thin: 1 });
 
 // Analyze results
 printSummary(trace);
+```
+
+### Namespaced / default imports
+
+```javascript
+import mc from '@tangent.to/mc';
+
+const model = new mc.Model({ name: 'linear_regression' });
+model.addVariable('alpha', new mc.distributions.Normal({ mean: 0, sd: 10, name: 'alpha' }));
+
+const sampler = new mc.samplers.MetropolisHastings({ proposalStd: 0.5 });
+// mc.diagnostics, mc.io, mc.plot are also available
 ```
 
 ## Core Concepts
 
 ### Models as DAGs
 
-Like PyMC, JSMC uses a Directed Acyclic Graph (DAG) structure to represent probabilistic models. Variables can depend on other variables, creating a natural flow from priors through transformations to likelihoods:
+Like PyMC, mc uses a Directed Acyclic Graph (DAG) structure to represent probabilistic models. Variables can depend on other variables, creating a natural flow from priors through transformations to likelihoods:
 
 ```javascript
 // Hyperpriors
@@ -112,53 +165,28 @@ const y = new Normal(mu_group, sigma_obs);
 
 ### Distributions
 
-JSMC provides a rich set of probability distributions:
+mc provides a rich set of probability distributions:
+
+Each constructor accepts positional arguments or an options object (shown second).
 
 #### Continuous Distributions
 
-- **Normal**: `new Normal(mu, sigma)` - Gaussian distribution
-- **Uniform**: `new Uniform(lower, upper)` - Uniform distribution
-- **Beta**: `new Beta(alpha, beta)` - Beta distribution (for probabilities)
-- **Gamma**: `new Gamma(alpha, beta)` - Gamma distribution (for positive values)
+- **Normal**: `new Normal(mu, sigma)` / `new Normal({ mean, sd })` - Gaussian distribution
+- **Uniform**: `new Uniform(lower, upper)` / `new Uniform({ min, max })` - Uniform distribution
+- **Beta**: `new Beta(alpha, beta)` / `new Beta({ alpha, beta })` - Beta distribution (for probabilities)
+- **Gamma**: `new Gamma(alpha, beta)` / `new Gamma({ shape, rate })` - Gamma distribution (for positive values)
 
 #### Discrete Distributions
 
-- **Bernoulli**: `new Bernoulli(p)` - Binary outcomes
+- **Bernoulli**: `new Bernoulli(p)` / `new Bernoulli({ p })` - Binary outcomes
 
 All distributions support:
 - `logProb(value)` - Compute log probability density/mass
+- `pdf(value)` - Compute probability density/mass (`exp(logProb)`)
 - `sample(shape)` - Generate random samples
 - `mean()` - Get the distribution mean
 - `variance()` - Get the distribution variance
-
-### Gaussian Processes
-
-JSMC includes a full implementation of Gaussian Processes for non-parametric regression:
-
-```javascript
-import { GaussianProcess, RBF, Matern32 } from '@tangent.to/mc';
-
-// Create GP with RBF kernel
-const kernel = new RBF(lengthscale=1.0, variance=1.0);
-const gp = new GaussianProcess(meanFunction=0, kernel, noiseVariance=0.01);
-
-// Fit to data
-gp.fit(X_train, y_train);
-
-// Make predictions
-const predictions = gp.predict(X_test, returnStd=true);
-// Returns: { mean: [...], std: [...] }
-
-// Sample functions from posterior
-const posteriorSamples = gp.samplePosterior(X_test, nSamples=5);
-```
-
-**Available Kernels**:
-- **RBF** (Squared Exponential): Smooth, infinitely differentiable functions
-- **Matern32**: Less smooth than RBF, once differentiable
-- **Matern52**: Middle ground between Matern32 and RBF
-- **Periodic**: For periodic/seasonal patterns
-- **Linear**: For linear trends
+- `getParams()` - Get the distribution's parameters as a plain object
 
 ### Model Predictions
 
@@ -181,10 +209,16 @@ const predictions = model.predictPosteriorSummary(
 
 ### Model Persistence
 
-Save and load model states and traces:
+File-based persistence is **Node-only** (`node:fs`) and is intentionally kept out of
+the browser-first main entry. Import it directly from its module in Node:
 
 ```javascript
-import { saveTrace, loadTrace, saveModelState } from '@tangent.to/mc';
+import {
+  saveTrace,
+  loadTrace,
+  saveModelState,
+  exportTraceForBrowser
+} from '@tangent.to/mc/persistence';
 
 // Save trace to JSON
 saveTrace(trace, 'trace.json');
@@ -195,7 +229,7 @@ const loadedTrace = loadTrace('trace.json');
 // Save complete model state
 saveModelState(model, trace, 'model_state.json');
 
-// Export for browser (no filesystem)
+// In the browser, serialize to a JSON string instead (no filesystem)
 const jsonString = exportTraceForBrowser(trace);
 ```
 
@@ -206,8 +240,8 @@ const jsonString = exportTraceForBrowser(trace);
 A simple but effective random-walk sampler:
 
 ```javascript
-const sampler = new MetropolisHastings(proposalStd);
-const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
+const sampler = new MetropolisHastings({ proposalStd });
+const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 ```
 
 **Parameters**:
@@ -223,8 +257,8 @@ const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
 A gradient-based sampler that uses automatic differentiation:
 
 ```javascript
-const sampler = new HamiltonianMC(stepSize, nSteps);
-const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
+const sampler = new HamiltonianMC({ stepSize, nSteps });
+const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 ```
 
 **Parameters**:
@@ -235,7 +269,7 @@ const trace = sampler.sample(model, initialValues, nSamples, burnIn, thin);
 
 ### Trace Analysis
 
-JSMC provides utilities for analyzing MCMC samples:
+mc provides utilities for analyzing MCMC samples:
 
 ```javascript
 import { summarize, effectiveSampleSize, gelmanRubin, printSummary } from '@tangent.to/mc';
@@ -279,13 +313,6 @@ node examples/hierarchical_model.js
 
 Multilevel model with partial pooling across groups, showcasing complex DAG structures.
 
-### Gaussian Process Regression
-```bash
-node examples/gaussian_process.js
-```
-
-Non-parametric regression using Gaussian Processes with different kernels and uncertainty quantification.
-
 ## API Reference
 
 ### Model Class
@@ -310,70 +337,82 @@ All distributions inherit from the base `Distribution` class:
 ```javascript
 class Distribution {
   logProb(value)      // Log probability
+  pdf(value)          // Probability density/mass (exp of logProb)
   sample(shape)       // Generate samples
   observe(data)       // Set observed data
   mean()             // Distribution mean
   variance()         // Distribution variance
+  getParams()        // Parameters as a plain object
 }
 ```
 
 ### Sampler Classes
 
+Constructors and `sample()` accept either positional arguments or a single
+options object.
+
 ```javascript
 class MetropolisHastings {
-  constructor(proposalStd)
-  sample(model, initialValues, nSamples, burnIn, thin)
+  constructor(proposalStd)                 // or ({ proposalStd })
+  sample(model, initialValues, nSamples, burnIn, thin)  // or (model, init, { nSamples, burnIn, thin })
   tuneProposal(acceptanceRate)
+  getParams()
 }
 
 class HamiltonianMC {
-  constructor(stepSize, nSteps)
+  constructor(stepSize, nSteps)            // or ({ stepSize, nSteps })
   sample(model, initialValues, nSamples, burnIn, thin)
+  getParams()
+}
+
+class NUTS {
+  constructor(stepSize, maxTreeDepth, targetAcceptance)  // or ({ stepSize, maxTreeDepth, targetAcceptance })
+  sample(model, initialValues, nSamples, nWarmup, thin)
+  getParams()
 }
 ```
 
 ## Browser & ObservableHQ
 
-JSMC works seamlessly in browser environments, including ObservableHQ notebooks:
+`mc` is a single browser-first build that runs the same in the browser, Node, and
+ObservableHQ — see [Installation](#installation) for loading `tfjs`. In Observable:
 
 ```javascript
-// In Observable, import from npm
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 
-// Use it!
 {
-  const { Model, Normal, MetropolisHastings } = jsmc;
+  const { Model, Normal, MetropolisHastings } = mc;
   // ... define and run your model
 }
 ```
 
-**Key differences in browser**:
-- Uses `@tensorflow/tfjs` instead of `@tensorflow/tfjs-node`
-- File I/O functions (`saveTrace`, `loadTrace`) not available
-- Use `exportTraceForBrowser()` and download as JSON instead
-- Slightly slower than Node.js, but enables interactive visualization
-
-**See [docs/OBSERVABLE.md](docs/OBSERVABLE.md) for detailed Observable examples and best practices.**
+**Notes for browser/Observable use**:
+- `tfjs` runs on its CPU/WebGL backend (there is no `@tensorflow/tfjs-node` — the
+  single build uses `@tensorflow/tfjs` everywhere), which enables interactive
+  visualization.
+- File-based persistence (`saveTrace`, `loadTrace`) is Node-only (`node:fs`) and is
+  not part of the browser entry. Import it from the `@tangent.to/mc/persistence`
+  subpath in Node if needed; in the browser, serialize with `traceToJSON(trace)`.
 
 ## Technical Details
 
 ### Built on TensorFlow.js
 
-JSMC leverages TensorFlow.js for:
-- **Automatic differentiation**: Essential for gradient-based samplers like HMC
+mc leverages TensorFlow.js for:
+- **Automatic differentiation**: Essential for gradient-based samplers like HMC/NUTS
 - **Efficient tensor operations**: Fast computation of log probabilities
-- **GPU acceleration**: Optional GPU support for large-scale models
+- **WebGL acceleration**: GPU-backed tensor math in the browser via the WebGL backend
 
 ### Comparison with PyMC
 
-| Feature | PyMC | JSMC |
+| Feature | PyMC | mc |
 |---------|------|------|
 | Language | Python | JavaScript |
 | Backend | Aesara/JAX | TensorFlow.js |
 | DAG Structure | Yes | Yes |
 | MCMC Samplers | NUTS, HMC, MH | HMC, MH |
 | Variational Inference | Yes | Planned |
-| GPU Support | Yes | Yes (via TF.js) |
+| GPU Support | Yes | Browser only (TF.js WebGL) |
 
 ## Performance Tips
 
@@ -395,7 +434,7 @@ JSMC leverages TensorFlow.js for:
 ```bash
 # Clone repository
 git clone https://github.com/tangent-to/mc.git
-cd jsmc
+cd mc
 
 # Install dependencies
 npm install
@@ -418,23 +457,20 @@ Apache-2.0
 ## Roadmap
 
 **Completed in v0.2.0**:
-- [x] Gaussian Processes with multiple kernels
 - [x] Posterior predictive sampling
 - [x] Model persistence (save/load)
 - [x] Browser/Observable support
 
 **Planned**:
 - [ ] Additional distributions (Poisson, Student-t, Exponential)
-- [ ] NUTS (No-U-Turn Sampler)
 - [ ] Variational inference (ADVI)
-- [ ] Sparse GPs (inducing points for large datasets)
 - [ ] Model comparison utilities (WAIC, LOO)
 - [ ] Trace visualization tools
 - [ ] PyMC model import/export
 
 ## Documentation
 
-- **[Observable Guide](docs/OBSERVABLE.md)** - Using JSMC in ObservableHQ notebooks
+- **[Observable Guide](docs/OBSERVABLE.md)** - Using mc in ObservableHQ notebooks
 - **[Considerations](docs/CONSIDERATIONS.md)** - Best practices, limitations, and design decisions
 - **[Examples](examples/)** - Complete working examples
 
@@ -444,15 +480,14 @@ Apache-2.0
 - [TensorFlow.js](https://www.tensorflow.org/js)
 - [Bayesian Data Analysis (Gelman et al.)](http://www.stat.columbia.edu/~gelman/book/)
 - [MCMC sampling for dummies](https://twiecki.io/blog/2015/11/10/mcmc-sampling-for-dummies/)
-- [Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/)
 
 ## Citation
 
-If you use JSMC in your research, please cite:
+If you use mc in your research, please cite:
 
 ```bibtex
-@software{jsmc,
-  title = {JSMC: JavaScript Markov Chain Monte Carlo},
+@software{mc,
+  title = {mc: JavaScript Markov Chain Monte Carlo},
   author = {},
   year = {2025},
   url = {https://github.com/tangent-to/mc}

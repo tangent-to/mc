@@ -1,5 +1,5 @@
-import * as tf from '@tensorflow/tfjs-node';
-import { Distribution } from './base.js';
+import * as tf from '@tensorflow/tfjs';
+import { Distribution, isOptions } from './base.js';
 
 /**
  * Normal (Gaussian) distribution
@@ -13,12 +13,27 @@ import { Distribution } from './base.js';
  */
 export class Normal extends Distribution {
   /**
-   * @param {number|tf.Tensor} mu - Mean parameter $\mu$
-   * @param {number|tf.Tensor} sigma - Standard deviation parameter $\sigma > 0$
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object, matching the
+   * dual-constructor convention of `@tangent.to/ds`.
+   *
+   * @param {number|tf.Tensor|Object} mu - Mean parameter $\mu$, or an options object
+   *   `{ mu | mean, sigma | sd, name }`
+   * @param {number|tf.Tensor} [sigma] - Standard deviation parameter $\sigma > 0$
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new Normal(0, 1)
+   * @example
+   * new Normal({ mean: 0, sd: 1 })
    */
   constructor(mu = 0, sigma = 1, name = 'Normal') {
     super(name);
+    if (isOptions(mu)) {
+      const o = mu;
+      this.name = o.name ?? 'Normal';
+      mu = o.mu ?? o.mean ?? 0;
+      sigma = o.sigma ?? o.sd ?? o.std ?? 1;
+    }
     this.mu = typeof mu === 'number' ? tf.scalar(mu) : mu;
     this.sigma = typeof sigma === 'number' ? tf.scalar(sigma) : sigma;
   }
@@ -73,5 +88,13 @@ export class Normal extends Distribution {
    */
   variance() {
     return tf.square(this.sigma);
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{mu: number, sigma: number}}
+   */
+  getParams() {
+    return { mu: this.mu.arraySync(), sigma: this.sigma.arraySync() };
   }
 }

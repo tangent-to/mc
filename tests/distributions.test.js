@@ -1,5 +1,5 @@
 import { Normal, Uniform, Beta, Gamma, Bernoulli } from '../src/distributions/index.js';
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 
 describe('Normal Distribution', () => {
   test('constructor creates distribution with correct parameters', () => {

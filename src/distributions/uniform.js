@@ -1,17 +1,31 @@
-import * as tf from '@tensorflow/tfjs-node';
-import { Distribution } from './base.js';
+import * as tf from '@tensorflow/tfjs';
+import { Distribution, isOptions } from './base.js';
 
 /**
  * Uniform distribution
  */
 export class Uniform extends Distribution {
   /**
-   * @param {number|tf.Tensor} lower - Lower bound
-   * @param {number|tf.Tensor} upper - Upper bound
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|tf.Tensor|Object} lower - Lower bound, or an options object
+   *   `{ lower | min, upper | max, name }`
+   * @param {number|tf.Tensor} [upper] - Upper bound
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new Uniform(0, 1)
+   * @example
+   * new Uniform({ min: 0, max: 1 })
    */
   constructor(lower = 0, upper = 1, name = 'Uniform') {
     super(name);
+    if (isOptions(lower)) {
+      const o = lower;
+      this.name = o.name ?? 'Uniform';
+      lower = o.lower ?? o.min ?? 0;
+      upper = o.upper ?? o.max ?? 1;
+    }
     this.lower = typeof lower === 'number' ? tf.scalar(lower) : lower;
     this.upper = typeof upper === 'number' ? tf.scalar(upper) : upper;
   }
@@ -65,5 +79,13 @@ export class Uniform extends Distribution {
   variance() {
     const range = tf.sub(this.upper, this.lower);
     return tf.div(tf.square(range), 12);
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{lower: number, upper: number}}
+   */
+  getParams() {
+    return { lower: this.lower.arraySync(), upper: this.upper.arraySync() };
   }
 }

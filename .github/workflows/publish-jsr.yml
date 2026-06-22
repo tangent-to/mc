@@ -58,10 +58,10 @@ jobs:
           echo "JSR configuration found"
           cat jsr.json
 
+      # Publishes over OIDC (id-token: write above); JSR authenticates the
+      # GitHub Actions identity directly, so no JSR_TOKEN secret is needed.
       - name: Publish to JSR
         run: npx jsr publish --allow-dirty
-        env:
-          JSR_TOKEN: ${{ secrets.JSR_TOKEN }}
 
       - name: Create publish summary
         run: |

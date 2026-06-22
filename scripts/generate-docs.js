@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Documentation Generator for JSMC
+ * Documentation Generator for @tangent.to/mc
  * Parses JSDoc comments and generates HTML documentation
  */
 
@@ -120,7 +120,7 @@ function generateHTML(fileData) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JSMC API Documentation</title>
+  <title>@tangent.to/mc API Documentation</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -228,7 +228,7 @@ function generateHTML(fileData) {
 </head>
 <body>
   <header>
-    <h1>JSMC API Documentation</h1>
+    <h1>@tangent.to/mc API Documentation</h1>
     <p>Automatically generated from source code JSDoc comments</p>
   </header>
 
@@ -245,7 +245,7 @@ function generateHTML(fileData) {
   </main>
 
   <footer>
-    <p>Generated from JSMC source code | <a href="https://github.com/essicolo/jsmc">GitHub</a></p>
+    <p>Generated from @tangent.to/mc source code | <a href="https://github.com/tangent-to/mc">GitHub</a></p>
   </footer>
 </body>
 </html>`;

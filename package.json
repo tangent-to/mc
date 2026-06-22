@@ -1,25 +1,37 @@
 {
   "name": "@tangent.to/mc",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
-  "main": "src/index.js",
-  "browser": "src/browser.js",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "browser": "./dist/index.js",
   "exports": {
     ".": {
-      "node": "./src/index.js",
-      "browser": "./src/browser.js",
-      "default": "./src/index.js"
-    }
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./persistence": "./src/utils/persistence.js"
   },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
+    "prepare": "npm run build:browser",
+    "build:browser": "esbuild src/index.js --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/index.js --sourcemap --minify --keep-names --external:@tensorflow/tfjs",
+    "watch": "esbuild src/index.js --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/index.js --sourcemap --keep-names --external:@tensorflow/tfjs --watch",
+    "jsr:publish": "deno publish --allow-dirty",
+    "jsr:publish:dry-run": "deno publish --dry-run --allow-dirty",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=tests/.*\\.test\\.js",
     "test:pymc": "node tests/pymc-comparison.js",
     "test:all": "npm run test:unit && npm run test:pymc",
     "example": "node examples/linear_regression.js",
-    "example:gp": "node examples/gaussian_process.js",
-    "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js && node examples/gaussian_process.js",
+    "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
     "prepublishOnly": "npm run test:all && npm run docs:generate"
@@ -34,8 +46,6 @@
     "bayesian-inference",
     "machine-learning",
     "tensorflow",
-    "gaussian-process",
-    "gp",
     "browser",
     "observable",
     "tangent.to"
@@ -44,11 +54,10 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@tensorflow/tfjs": "^4.21.0",
-    "@tensorflow/tfjs-node": "^4.21.0",
-    "jstat": "^1.9.6",
-    "ml-matrix": "^6.12.1"
+    "jstat": "^1.9.6"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "jest": "^29.7.0"
   },
   "engines": {

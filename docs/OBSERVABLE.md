@@ -1,22 +1,22 @@
-# Using JSMC in ObservableHQ
+# Using mc in ObservableHQ
 
-JSMC is fully compatible with Observable notebooks, allowing you to perform Bayesian inference and visualize results interactively in the browser.
+mc is fully compatible with Observable notebooks, allowing you to perform Bayesian inference and visualize results interactively in the browser.
 
 ## Quick Start
 
-### 1. Import JSMC
+### 1. Import mc
 
-In an Observable cell, you can import JSMC directly from npm:
+In an Observable cell, you can import mc directly from npm. The jsDelivr `+esm` endpoint auto-resolves the `@tensorflow/tfjs` peer dependency, so a single import works:
 
 ```javascript
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc@0.2.0/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 Or using dynamic import:
 
 ```javascript
 {
-  const module = await import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js");
+  const module = await import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm");
   return module;
 }
 ```
@@ -25,7 +25,7 @@ Or using dynamic import:
 
 ```javascript
 {
-  const { Model, Normal, Uniform, MetropolisHastings } = await import("jsmc/browser");
+  const { Model, Normal, Uniform, MetropolisHastings } = await import("@tangent.to/mc");
 
   // Generate synthetic data
   const n = 50;
@@ -58,7 +58,7 @@ Or using dynamic import:
 
 ### 3. Visualizing Results with Plot
 
-Observable's Plot library works great with JSMC traces:
+Observable's Plot library works great with mc traces:
 
 ```javascript
 Plot.plot({
@@ -75,68 +75,6 @@ Plot.plot({
 })
 ```
 
-### 4. Gaussian Process Visualization
-
-```javascript
-{
-  const { GaussianProcess, RBF } = await import("jsmc/browser");
-
-  // Training data
-  const X_train = [[-2], [-1], [0], [1], [2]];
-  const y_train = X_train.map(([x]) => Math.sin(x) + Math.random() * 0.1);
-
-  // Fit GP
-  const kernel = new RBF(1.0, 1.0);
-  const gp = new GaussianProcess(0, kernel, 0.05);
-  gp.fit(X_train, y_train);
-
-  // Predict
-  const X_test = Array.from({length: 100}, (_, i) => [(i - 50) / 10]);
-  const predictions = gp.predict(X_test, true);
-
-  // Prepare data for plotting
-  const data = X_test.map(([x], i) => ({
-    x: x,
-    mean: predictions.mean[i],
-    lower: predictions.mean[i] - 2 * predictions.std[i],
-    upper: predictions.mean[i] + 2 * predictions.std[i]
-  }));
-
-  return data;
-}
-```
-
-Then visualize with confidence bands:
-
-```javascript
-Plot.plot({
-  marks: [
-    // Confidence band
-    Plot.areaY(gpData, {
-      x: "x",
-      y1: "lower",
-      y2: "upper",
-      fill: "steelblue",
-      fillOpacity: 0.2
-    }),
-    // Mean prediction
-    Plot.line(gpData, {
-      x: "x",
-      y: "mean",
-      stroke: "steelblue"
-    }),
-    // Training points
-    Plot.dot(trainingData, {
-      x: "x",
-      y: "y",
-      fill: "red"
-    })
-  ],
-  y: {label: "y"},
-  x: {label: "x"}
-})
-```
-
 ## Browser-Specific Considerations
 
 ### Memory Management
@@ -144,9 +82,20 @@ Plot.plot({
 TensorFlow.js in the browser requires manual memory management. Use `tf.tidy()` or dispose tensors:
 
 ```javascript
-// The GP and samplers already use tf.tidy() internally,
+// The samplers already use tf.tidy() internally,
 // but be mindful when creating custom operations
 ```
+
+`@tensorflow/tfjs` is a peer dependency and is not bundled into mc; in Observable jsDelivr's `+esm` endpoint auto-resolves it. mc also re-exports the shared instance as `tf`:
+
+```javascript
+{
+  const { tf } = await import("@tangent.to/mc");
+  return tf;
+}
+```
+
+There is a single browser-first build that runs on the tfjs CPU/WebGL backend everywhere.
 
 ### Performance
 
@@ -158,13 +107,13 @@ Browser-based MCMC is slower than Node.js:
 
 ### Saving Results
 
-Since there's no filesystem in the browser, use the browser-compatible persistence:
+Since there's no filesystem in the browser, use the browser-compatible serialization. File-based persistence (`saveTrace`, `loadTrace`, `saveModelState`, `exportTraceForBrowser`, `importTraceFromJSON`) lives in a Node-only module that imports `node:fs` and is not importable in the browser. Instead use `traceToJSON(trace)` (returns a JSON string) and `traceToCSV(...)`, which are exported from the main entry `@tangent.to/mc`:
 
 ```javascript
 {
-  const { exportTraceForBrowser } = await import("jsmc/browser");
+  const { traceToJSON } = await import("@tangent.to/mc");
 
-  const jsonString = exportTraceForBrowser(trace);
+  const jsonString = traceToJSON(trace);
 
   // Create download link
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -178,12 +127,10 @@ Since there's no filesystem in the browser, use the browser-compatible persisten
 
 ```javascript
 {
-  const { importTraceFromJSON } = await import("jsmc/browser");
-
   // User uploads JSON file
   const file = await Inputs.file({accept: ".json"});
   const text = await file.text();
-  const trace = importTraceFromJSON(text);
+  const trace = JSON.parse(text);
 
   return trace;
 }
@@ -220,7 +167,7 @@ Here's a complete template for an Observable notebook:
 
 ```javascript
 // Cell 1: Import library
-jsmc = import("https://cdn.jsdelivr.net/npm/jsmc/src/browser.js")
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ```javascript
@@ -236,7 +183,7 @@ data = {
 ```javascript
 // Cell 3: Define and fit model
 trace = {
-  const { Model, Normal, Uniform, MetropolisHastings } = jsmc;
+  const { Model, Normal, Uniform, MetropolisHastings } = mc;
 
   const model = new Model('linear_regression');
 
@@ -295,12 +242,11 @@ Plot.plot({
 
 - [Observable Plot Documentation](https://observablehq.com/plot/)
 - [Observable Inputs](https://observablehq.com/@observablehq/inputs)
-- [JSMC Examples](https://github.com/essicolo/jsmc/tree/main/examples)
+- [mc Examples](https://github.com/tangent-to/mc/tree/main/examples)
 
 ## Example Notebooks
 
 Coming soon:
 - Bayesian Linear Regression
-- Gaussian Process Regression with Interactive Kernel Selection
 - Hierarchical Models with Partial Pooling
 - A/B Testing with Bayesian Statistics

@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 
 /**
  * Model class for defining Bayesian probabilistic models
@@ -20,11 +20,65 @@ import * as tf from '@tensorflow/tfjs-node';
  * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
 export class Model {
+  /**
+   * Accepts either a positional name or a single options object `{ name }`.
+   *
+   * @param {string|Object} name - Model name, or an options object `{ name }`
+   *
+   * @example
+   * new Model('linear_regression')
+   * @example
+   * new Model({ name: 'linear_regression' })
+   */
   constructor(name = 'model') {
+    if (name !== null && typeof name === 'object' && !Array.isArray(name)) {
+      name = name.name ?? 'model';
+    }
     this.name = name;
     this.variables = new Map(); // Random variables in the model
     this.observedVars = new Map(); // Observed data
+    this.potentials = new Map(); // Generic log-density terms (factors / likelihoods)
+    this.deterministics = new Map(); // Named transforms recorded in the trace
     this.logProbFn = null; // Compiled log probability function
+  }
+
+  /**
+   * Register a generic log-density term (a "potential" / factor) contributing to
+   * the joint log-probability. `fn(params)` receives the current free-variable
+   * values as tf tensors keyed by name and must return a tf.Tensor of
+   * log-density values (which are summed into the total).
+   *
+   * This is the general mechanism for likelihoods whose parameters are arbitrary
+   * deterministic functions of the latent variables and data — the deterministic
+   * expression is computed inside `fn`, so it is not specific to any one model:
+   *
+   * ```js
+   * model.potential('y', (v) =>
+   *   new Normal(tf.add(tf.mul(v.slope, xData), v.intercept), v.sigma).logProb(yData));
+   * ```
+   *
+   * @param {string} name - Identifier for the term
+   * @param {(params: Object) => tf.Tensor} fn - Returns a log-density tensor
+   * @returns {Model} this
+   */
+  potential(name, fn) {
+    this.potentials.set(name, fn);
+    return this;
+  }
+
+  /**
+   * Register a named deterministic transform of the parameters for recording in
+   * the trace (computed post-hoc from posterior draws). Deterministics do NOT
+   * affect the log-probability — use {@link Model#potential} for likelihood or
+   * factor terms.
+   *
+   * @param {string} name - Identifier for the transform
+   * @param {(params: Object) => (tf.Tensor|number|Array)} fn - The transform
+   * @returns {Model} this
+   */
+  deterministic(name, fn) {
+    this.deterministics.set(name, fn);
+    return this;
   }
 
   /**
@@ -77,6 +131,11 @@ export class Model {
         }
       }
 
+      // Generic potential / likelihood terms (deterministic-mean factors).
+      for (const fn of this.potentials.values()) {
+        logProb = tf.add(logProb, tf.sum(fn(params)));
+      }
+
       return logProb;
     });
   }
@@ -87,47 +146,35 @@ export class Model {
    * @returns {Object} {logProb: number, gradients: Object}
    */
   logProbAndGradient(params) {
-    // Convert params to tf.Variables for gradient computation
-    const tfParams = {};
     const paramNames = Object.keys(params);
 
-    for (const name of paramNames) {
-      tfParams[name] = tf.variable(params[name]);
-    }
-
-    let logProbValue;
-    const gradients = {};
-
-    // Compute gradients
-    const grads = tf.variableGrads(() => {
-      logProbValue = this.logProb(tfParams);
-      return logProbValue;
+    // Inputs as tensors (track the ones we create so we can free them).
+    const created = [];
+    const inputs = paramNames.map((name) => {
+      const v = params[name];
+      if (v instanceof tf.Tensor) return v;
+      const t = tf.tensor(v);
+      created.push(t);
+      return t;
     });
 
-    // Extract gradient values and map back to variable names
-    // variableGrads returns gradients as an object keyed by variable
-    // We need to iterate through and match them to parameter names
-    const gradValues = Object.values(grads.grads);
-    const gradKeys = Object.keys(grads.grads);
-
-    paramNames.forEach((name, idx) => {
-      if (idx < gradValues.length) {
-        gradients[name] = gradValues[idx];
-      } else {
-        // If no gradient, create zero gradient
-        gradients[name] = tf.zeros(tfParams[name].shape);
-      }
-    });
-
-    // Clean up variables
-    for (const name of paramNames) {
-      tfParams[name].dispose();
-    }
-
-    return {
-      logProb: logProbValue.arraySync(),
-      gradients: gradients
+    // tf.valueAndGrads differentiates w.r.t. the positional inputs and returns
+    // gradients in the SAME order — robust regardless of variable naming.
+    const f = (...args) => {
+      const dict = {};
+      paramNames.forEach((name, i) => { dict[name] = args[i]; });
+      return this.logProb(dict);
     };
+    const { value, grads } = tf.valueAndGrads(f)(inputs);
+
+    const gradients = {};
+    paramNames.forEach((name, i) => { gradients[name] = grads[i]; });
+
+    const logProbValue = value.arraySync();
+    value.dispose();
+    created.forEach((t) => t.dispose());
+
+    return { logProb: logProbValue, gradients };
   }
 
   /**

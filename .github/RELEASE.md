@@ -176,7 +176,7 @@ npm install @tangent.to/mc@beta
    ```
 3. **Verify in Observable**:
    ```javascript
-   import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/src/browser.js")
+   import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
    ```
 4. **Test in Deno**:
    ```typescript

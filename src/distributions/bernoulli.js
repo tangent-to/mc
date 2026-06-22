@@ -1,16 +1,29 @@
-import * as tf from '@tensorflow/tfjs-node';
-import { Distribution } from './base.js';
+import * as tf from '@tensorflow/tfjs';
+import { Distribution, isOptions } from './base.js';
 
 /**
  * Bernoulli distribution for binary outcomes
  */
 export class Bernoulli extends Distribution {
   /**
-   * @param {number|tf.Tensor} p - Probability of success (must be in [0, 1])
-   * @param {string} name - Name of the distribution
+   * Accepts either positional arguments or a single options object.
+   *
+   * @param {number|tf.Tensor|Object} p - Probability of success in [0, 1], or an
+   *   options object `{ p, name }`
+   * @param {string} [name] - Name of the distribution
+   *
+   * @example
+   * new Bernoulli(0.7)
+   * @example
+   * new Bernoulli({ p: 0.7 })
    */
   constructor(p = 0.5, name = 'Bernoulli') {
     super(name);
+    if (isOptions(p)) {
+      const o = p;
+      this.name = o.name ?? 'Bernoulli';
+      p = o.p ?? 0.5;
+    }
     this.p = typeof p === 'number' ? tf.scalar(p) : p;
   }
 
@@ -59,5 +72,13 @@ export class Bernoulli extends Distribution {
    */
   variance() {
     return tf.mul(this.p, tf.sub(1, this.p));
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{p: number}}
+   */
+  getParams() {
+    return { p: this.p.arraySync() };
   }
 }
