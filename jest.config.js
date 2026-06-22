@@ -5,8 +5,7 @@ export default {
     '**/tests/**/*.test.js'
   ],
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/browser.js'
+    'src/**/*.js'
   ],
   coverageDirectory: 'coverage',
   verbose: true,

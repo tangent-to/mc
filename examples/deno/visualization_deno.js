@@ -16,7 +16,7 @@ import {
   tracePlot,
   posteriorPlot,
   forestPlot
-} from "npm:@tangent.to/mc@0.2.0";
+} from "npm:@tangent.to/mc";
 
 console.log("=== Visualization with Deno ===\n");
 

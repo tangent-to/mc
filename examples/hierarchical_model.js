@@ -17,7 +17,7 @@ import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '../src
 import * as tf from '@tensorflow/tfjs-node';
 
 async function main() {
-  console.log('=== Hierarchical Bayesian Model with JSMC ===\n');
+  console.log('=== Hierarchical Bayesian Model with mc ===\n');
 
   // Generate synthetic hierarchical data
   const nGroups = 5;

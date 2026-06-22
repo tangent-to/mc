@@ -11,7 +11,7 @@
  * To run from command line: deno run --allow-read --allow-env hierarchical_model.js
  */
 
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc@0.2.0";
+import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc";
 
 console.log("=== Hierarchical Bayesian Model with Deno ===\n");
 

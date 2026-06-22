@@ -88,7 +88,7 @@ mc works with Deno using npm specifiers:
 import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
 // Or use JSR
-// import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc";
+// import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
 ```
 
 ### Example in Deno REPL

@@ -77,13 +77,13 @@ y_i ~ N(mu_group[i], sigma)        # Observations
 All examples import from npm registry:
 
 ```javascript
-import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc@0.2.0";
+import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 ```
 
 After JSR publication, you can also use:
 
 ```javascript
-import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc@0.2.0";
+import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
 ```
 
 ## Tips for Zed REPL

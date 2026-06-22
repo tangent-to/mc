@@ -8,7 +8,7 @@ title: Home
 **JavaScript Markov Chain Monte Carlo** - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript.
 
 [![npm version](https://img.shields.io/npm/v/@tangent.to/mc.svg)](https://www.npmjs.com/package/@tangent.to/mc)
-[![JSR](https://jsr.io/badges/@tangent-to/mc)](https://jsr.io/@tangent-to/mc)
+[![JSR](https://jsr.io/badges/@tangent/mc)](https://jsr.io/@tangent/mc)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Quick Start
@@ -25,7 +25,7 @@ npm install @tangent.to/mc @tensorflow/tfjs
 
 **Deno:**
 ```typescript
-import { Model, Normal, MetropolisHastings } from "jsr:@tangent-to/mc";
+import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
 ```
 
 **Observable:**

@@ -14,7 +14,7 @@ function sigmoid(x) {
 }
 
 async function main() {
-  console.log('=== Bayesian Logistic Regression with JSMC ===\n');
+  console.log('=== Bayesian Logistic Regression with mc ===\n');
 
   // Generate synthetic binary classification data
   const trueAlpha = -1.0;
