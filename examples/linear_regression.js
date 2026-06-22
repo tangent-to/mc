@@ -1,7 +1,7 @@
 /**
  * Linear Regression Example
  *
- * This example demonstrates how to use JSMC for Bayesian linear regression.
+ * This example demonstrates how to use mc for Bayesian linear regression.
  * The model structure is: y = α + β*x + ε, where ε ~ N(0, σ)
  */
 
@@ -9,7 +9,7 @@ import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '../src
 import * as tf from '@tensorflow/tfjs-node';
 
 async function main() {
-  console.log('=== Bayesian Linear Regression with JSMC ===\n');
+  console.log('=== Bayesian Linear Regression with mc ===\n');
 
   // Generate synthetic data
   const trueAlpha = 2.0;

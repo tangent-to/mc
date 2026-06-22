@@ -10,7 +10,7 @@
  * To run from command line: deno run --allow-read --allow-env linear_regression.js
  */
 
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc@0.2.0";
+import { Model, Normal, Uniform, MetropolisHastings, printSummary } from "npm:@tangent.to/mc";
 
 console.log("=== Bayesian Linear Regression with Deno ===\n");
 
