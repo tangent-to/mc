@@ -66,11 +66,11 @@ jobs:
       - name: Create publish summary
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "## Published @tangent-to/mc@$VERSION to JSR" >> $GITHUB_STEP_SUMMARY
+          echo "## Published @tangent/mc@$VERSION to JSR" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Package published to: https://jsr.io/@tangent-to/mc" >> $GITHUB_STEP_SUMMARY
+          echo "Package published to: https://jsr.io/@tangent/mc" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Install with Deno:" >> $GITHUB_STEP_SUMMARY
           echo '```typescript' >> $GITHUB_STEP_SUMMARY
-          echo 'import { Model, Normal } from "jsr:@tangent-to/mc";' >> $GITHUB_STEP_SUMMARY
+          echo 'import { Model, Normal } from "jsr:@tangent/mc";' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
