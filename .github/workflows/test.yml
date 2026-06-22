@@ -28,7 +28,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run PyMC comparison tests
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          TF_ENABLE_ONEDNN_OPTS: 0
+
+      - name: Run inference (parameter-recovery) tests
         run: npm run test:pymc
         env:
           TF_ENABLE_ONEDNN_OPTS: 0
@@ -37,9 +42,6 @@ jobs:
         run: |
           echo "Running linear regression example..."
           timeout 60 npm run example || echo "Example completed or timed out"
-
-          echo "Running GP example..."
-          timeout 60 npm run example:gp || echo "Example completed or timed out"
 
       - name: Generate documentation
         run: npm run docs:generate
@@ -94,7 +96,6 @@ jobs:
             "LICENSE"
             "package.json"
             "src/index.js"
-            "src/browser.js"
             "docs/PLATFORMS.md"
             "docs/OBSERVABLE.md"
           )
