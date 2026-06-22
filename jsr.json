@@ -1,5 +1,5 @@
 {
-  "name": "@tangent-to/mc",
+  "name": "@tangent/mc",
   "version": "0.4.0",
   "exports": {
     ".": "./src/index.js",
