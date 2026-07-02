@@ -184,9 +184,16 @@ export class NUTS {
 
       const H = this.hamiltonian(positionNew, momentumNew, model);
 
-      // Energy ratio exp(H0 - H), computed once
+      // Slice-sampling membership (Hoffman & Gelman 2014, Alg. 3): the slice
+      // variable is u = slice ~ Uniform(0, e^{-H0}) (see sample()), and a state
+      // is in the slice iff u ≤ e^{-H(θ',r')}. Comparing to e^{H0-H} instead
+      // would be off by a factor e^{H0}; since H0 ∝ the data log-likelihood
+      // magnitude, that makes the test vacuously true and disables the energy
+      // weighting, inflating the posterior variance.
+      const valid = slice <= Math.exp(-H);
+
+      // Metropolis acceptance ratio for dual-averaging adaptation.
       const expHDiff = Math.exp(H0 - H);
-      const valid = slice <= expHDiff;
 
       return {
         positionMinus: positionNew,
@@ -195,7 +202,8 @@ export class NUTS {
         momentumPlus: momentumNew,
         positionPrime: positionNew,
         nValid: valid ? 1 : 0,
-        stop: !valid || (H0 - H) > deltaMax,
+        // Divergence: stop when the energy error blows up (H ≫ H0).
+        stop: !valid || (H - H0) > deltaMax,
         alpha: Math.min(1, expHDiff),
         nAlpha: 1
       };
@@ -244,16 +252,28 @@ export class NUTS {
   }
 
   /**
-   * Run NUTS sampling
+   * Run NUTS sampling.
+   *
    * The sampling controls may be passed positionally or as a single options
-   * object `{ nSamples, nWarmup, thin }`.
+   * object. When an options object is supplied as the third argument, the
+   * `nWarmup` and `thin` positional arguments are ignored in favour of the
+   * object's fields.
    *
    * @param {Model} model - The probabilistic model
    * @param {Object} initialValues - Initial parameter values
-   * @param {number|Object} nSamples - Number of samples, or an options object
-   * @param {number} nWarmup - Number of warmup samples (for step size adaptation)
-   * @param {number} thin - Thinning interval
+   * @param {Object|number} [nSamples=1000] - Number of samples, or an options object
+   * @param {number} [nSamples.nSamples=1000] - Number of samples (options-object form)
+   * @param {number} [nSamples.nWarmup=500] - Number of warmup samples for step-size adaptation (options-object form)
+   * @param {number} [nSamples.burnIn] - Alias for `nWarmup`; used only when `nWarmup` is not given (options-object form)
+   * @param {number} [nSamples.thin=1] - Thinning interval (options-object form)
+   * @param {number} [nWarmup=500] - Number of warmup samples for step-size adaptation (positional form)
+   * @param {number} [thin=1] - Thinning interval (positional form)
    * @returns {Object} Trace object with samples and diagnostics
+   *
+   * @example
+   * nuts.sample(model, { mu: 0 }, 1000, 500, 1)
+   * @example
+   * nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
    */
   sample(model, initialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
     if (isOptions(nSamples)) {
@@ -350,12 +370,13 @@ export class NUTS {
       // Update current state
       currentParams = proposedParams;
 
-      // Compute acceptance rate for this iteration
+      // Mean Metropolis acceptance probability over the trajectory. Averaging
+      // these per-iteration means gives the standard HMC/NUTS acceptance
+      // statistic that dual averaging targets (`targetAcceptance`), rather than
+      // the fraction of iterations exceeding an arbitrary 0.5 cutoff.
       const iterAcceptRate = alpha / Math.max(nAlpha, 1);
       accepted.total++;
-      if (iterAcceptRate > 0.5) { // Simplified acceptance tracking
-        accepted.count++;
-      }
+      accepted.count += iterAcceptRate;
 
       // Adapt step size during warmup using dual averaging
       if (i < nWarmup) {
@@ -391,6 +412,8 @@ export class NUTS {
     const finalAcceptanceRate = (accepted.count / accepted.total * 100).toFixed(1);
     console.log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
     console.log(`Adapted step size: ${this.stepSize.toFixed(6)}`);
+
+    model.computeDeterministics(trace); // append post-hoc deterministic columns
 
     return {
       trace,

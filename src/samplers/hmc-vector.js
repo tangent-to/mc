@@ -5,7 +5,7 @@ import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
  * Vector-aware Hamiltonian Monte Carlo.
  *
  * Unlike the scalar `HamiltonianMC`/`NUTS` in this package, this sampler flattens
- * all free variables — scalars and 1-D vectors alike — into a single real vector
+ * all free variables - scalars and 1-D vectors alike - into a single real vector
  * and runs leapfrog dynamics on it. That makes it suitable for hierarchical
  * models whose parameters are vectors (per-group effects, per-site plateaus, …)
  * and for likelihoods defined through {@link Model#potential} (a deterministic
@@ -183,6 +183,8 @@ export class HMC {
         console.log(`HMC ${phase} ${Math.round((100 * (i + 1)) / total)}% | step=${eps.toExponential(2)} | accept=${(100 * accCount / accTotal).toFixed(0)}%`);
       }
     }
+
+    model.computeDeterministics(trace); // append post-hoc deterministic columns
 
     return { trace, acceptanceRate: accCount / accTotal, stepSize: eps, divergences, specs };
   }

@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { Distribution } from './base.js';
+import { Distribution, isOptions } from './base.js';
 
 /**
  * Log-normal distribution
@@ -26,6 +26,12 @@ export class Lognormal extends Distribution {
    */
   constructor(mu = 0, sigma = 1, name = 'Lognormal') {
     super(name);
+    if (isOptions(mu)) {
+      const o = mu;
+      this.name = o.name ?? 'Lognormal';
+      mu = o.mu ?? o.mean ?? 0;
+      sigma = o.sigma ?? o.sd ?? o.std ?? 1;
+    }
     this.mu = typeof mu === 'number' ? tf.scalar(mu) : mu;
     this.sigma = typeof sigma === 'number' ? tf.scalar(sigma) : sigma;
   }
@@ -68,8 +74,30 @@ export class Lognormal extends Distribution {
     });
   }
 
-  /** Mean of the distribution: $\exp(\mu + \sigma^2/2)$. */
+  /**
+   * Mean of the distribution: $\exp(\mu + \sigma^2/2)$.
+   * @returns {tf.Tensor} The mean
+   */
   mean() {
     return tf.tidy(() => tf.exp(tf.add(this.mu, tf.mul(0.5, tf.square(this.sigma)))));
+  }
+
+  /**
+   * Variance of the distribution: (exp(sigma^2) - 1) * exp(2*mu + sigma^2).
+   * @returns {tf.Tensor} The variance
+   */
+  variance() {
+    return tf.tidy(() => {
+      const s2 = tf.square(this.sigma);
+      return tf.mul(tf.sub(tf.exp(s2), 1), tf.exp(tf.add(tf.mul(2, this.mu), s2)));
+    });
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{mu: number, sigma: number}}
+   */
+  getParams() {
+    return { mu: this.mu.arraySync(), sigma: this.sigma.arraySync() };
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@tangent.to/mc",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
   "type": "module",
   "main": "./dist/index.js",
@@ -32,9 +32,11 @@
     "test:all": "npm run test:unit && npm run test:pymc",
     "example": "node examples/linear_regression.js",
     "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js",
+    "docs:api": "node scripts/build-api-docs.mjs",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
-    "prepublishOnly": "npm run test:all && npm run docs:generate"
+    "verify": "node verify-package.js",
+    "prepublishOnly": "npm run test:all && npm run verify"
   },
   "keywords": [
     "bayesian",
@@ -58,7 +60,9 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-markdown": "^4.4.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -46,16 +46,27 @@ export class MetropolisHastings {
   }
 
   /**
-   * Run Metropolis-Hastings sampling
+   * Run Metropolis-Hastings sampling.
+   *
    * The sampling controls may be passed positionally or as a single options
-   * object `{ nSamples, burnIn, thin }`.
+   * object. When an options object is supplied as the third argument, the
+   * `burnIn` and `thin` positional arguments are ignored in favour of the
+   * object's fields.
    *
    * @param {Model} model - The probabilistic model
    * @param {Object} initialValues - Initial parameter values
-   * @param {number|Object} nSamples - Number of samples, or an options object
-   * @param {number} burnIn - Number of burn-in samples to discard
-   * @param {number} thin - Thinning interval (keep every nth sample)
+   * @param {Object|number} [nSamples=1000] - Number of samples, or an options object
+   * @param {number} [nSamples.nSamples=1000] - Number of samples (options-object form)
+   * @param {number} [nSamples.burnIn=500] - Number of burn-in samples to discard (options-object form)
+   * @param {number} [nSamples.thin=1] - Thinning interval, keep every nth sample (options-object form)
+   * @param {number} [burnIn=500] - Number of burn-in samples to discard (positional form)
+   * @param {number} [thin=1] - Thinning interval, keep every nth sample (positional form)
    * @returns {Object} Trace object with samples and diagnostics
+   *
+   * @example
+   * mh.sample(model, { mu: 0 }, 1000, 500, 1)
+   * @example
+   * mh.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
    */
   sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
     if (isOptions(nSamples)) {
@@ -116,6 +127,8 @@ export class MetropolisHastings {
 
     const finalAcceptanceRate = (accepted.count / accepted.total * 100).toFixed(1);
     console.log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
+
+    model.computeDeterministics(trace); // append post-hoc deterministic columns
 
     return {
       trace,
