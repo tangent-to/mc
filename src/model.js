@@ -49,7 +49,7 @@ export class Model {
    * log-density values (which are summed into the total).
    *
    * This is the general mechanism for likelihoods whose parameters are arbitrary
-   * deterministic functions of the latent variables and data — the deterministic
+   * deterministic functions of the latent variables and data - the deterministic
    * expression is computed inside `fn`, so it is not specific to any one model:
    *
    * ```js
@@ -69,7 +69,7 @@ export class Model {
   /**
    * Register a named deterministic transform of the parameters for recording in
    * the trace (computed post-hoc from posterior draws). Deterministics do NOT
-   * affect the log-probability — use {@link Model#potential} for likelihood or
+   * affect the log-probability - use {@link Model#potential} for likelihood or
    * factor terms.
    *
    * @param {string} name - Identifier for the transform
@@ -143,7 +143,8 @@ export class Model {
   /**
    * Compute the log probability and its gradient with respect to parameters
    * @param {Object} params - Parameter values as {name: tf.Tensor} pairs
-   * @returns {Object} {logProb: number, gradients: Object}
+   * @returns {{logProb: number, gradients: Object}} The scalar log probability
+   *   and a `{name: tf.Tensor}` map of gradients, one per parameter
    */
   logProbAndGradient(params) {
     const paramNames = Object.keys(params);
@@ -159,7 +160,7 @@ export class Model {
     });
 
     // tf.valueAndGrads differentiates w.r.t. the positional inputs and returns
-    // gradients in the SAME order — robust regardless of variable naming.
+    // gradients in the SAME order - robust regardless of variable naming.
     const f = (...args) => {
       const dict = {};
       paramNames.forEach((name, i) => { dict[name] = args[i]; });
@@ -208,6 +209,41 @@ export class Model {
       }
     }
     return names;
+  }
+
+  /**
+   * Evaluate registered {@link Model#deterministic} transforms on each posterior
+   * draw and append them to the trace as extra columns. Computed post-hoc - they
+   * do not affect sampling - and the MCMC samplers call this automatically before
+   * returning their trace. Each `fn(params)` receives a `{name: number}` map of
+   * the free-variable values for one draw and may return a number, an array, or a
+   * tf.Tensor (tensors are read out and disposed).
+   *
+   * @param {Object} trace - Trace map `{ name: [...] }` or a `{ trace }` wrapper.
+   * @returns {Object} The same trace, with one column per deterministic.
+   */
+  computeDeterministics(trace) {
+    if (!this.deterministics.size || !trace) return trace;
+    const cols = trace.trace || trace;
+    const freeNames = this.getFreeVariableNames();
+    const anchor = freeNames.find((n) => Array.isArray(cols[n]));
+    const nDraws = anchor ? cols[anchor].length : 0;
+    for (const [name, fn] of this.deterministics.entries()) {
+      const out = new Array(nDraws);
+      for (let i = 0; i < nDraws; i++) {
+        const params = {};
+        for (const fv of freeNames) params[fv] = cols[fv] ? cols[fv][i] : undefined;
+        let v = fn(params);
+        if (v && typeof v.arraySync === 'function') {
+          const arr = v.arraySync();
+          if (typeof v.dispose === 'function') v.dispose();
+          v = arr;
+        }
+        out[i] = v;
+      }
+      cols[name] = out;
+    }
+    return trace;
   }
 
   /**

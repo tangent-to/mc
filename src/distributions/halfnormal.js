@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { Distribution } from './base.js';
+import { Distribution, isOptions } from './base.js';
 
 /**
  * Half-normal distribution
@@ -23,6 +23,11 @@ export class HalfNormal extends Distribution {
    */
   constructor(sigma = 1, name = 'HalfNormal') {
     super(name);
+    if (isOptions(sigma)) {
+      const o = sigma;
+      this.name = o.name ?? 'HalfNormal';
+      sigma = o.sigma ?? o.sd ?? o.std ?? o.scale ?? 1;
+    }
     this.sigma = typeof sigma === 'number' ? tf.scalar(sigma) : sigma;
   }
 
@@ -66,8 +71,27 @@ export class HalfNormal extends Distribution {
     });
   }
 
-  /** Mean of the distribution: $\sigma\sqrt{2/\pi}$. */
+  /**
+   * Mean of the distribution: $\sigma\sqrt{2/\pi}$.
+   * @returns {tf.Tensor} The mean
+   */
   mean() {
     return tf.tidy(() => tf.mul(this.sigma, Math.sqrt(2 / Math.PI)));
+  }
+
+  /**
+   * Variance of the distribution: sigma^2 * (1 - 2/pi).
+   * @returns {tf.Tensor} The variance
+   */
+  variance() {
+    return tf.tidy(() => tf.mul(tf.square(this.sigma), 1 - 2 / Math.PI));
+  }
+
+  /**
+   * Get the distribution's parameters.
+   * @returns {{sigma: number}}
+   */
+  getParams() {
+    return { sigma: this.sigma.arraySync() };
   }
 }

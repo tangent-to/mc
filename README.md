@@ -10,7 +10,7 @@ MC brings the power of Bayesian statistical modeling to JavaScript, providing an
 
 MC follows the same API conventions as its sibling data-science package [`@tangent.to/ds`](https://github.com/tangent-to/ds):
 
-- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `samplers`, `diagnostics`, `io`, and `plot`.
+- **Namespaced + flat exports.** Import individual symbols (`import { Normal } from '@tangent.to/mc'`), grouped namespaces (`import { distributions, samplers } from '@tangent.to/mc'`), or the whole library as a default export (`import mc from '@tangent.to/mc'` → `mc.distributions.Normal`). The namespaces are `distributions`, `samplers`, `diagnostics`, and `plot`. (File-based persistence is a Node-only subpath, `@tangent.to/mc/persistence`, not a namespace on the main entry.)
 - **Options-object constructors.** Every configurable class accepts a single options object in addition to positional arguments, e.g. `new Normal({ mean: 0, sd: 1 })` or `new MetropolisHastings({ proposalStd: 0.5 })`. Positional forms continue to work.
 - **Introspection.** Distributions and samplers expose `getParams()`.
 
@@ -18,7 +18,7 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 
 - **PyMC-like DAG structure**: Define models by connecting distributions in a directed acyclic graph
 - **TensorFlow.js integration**: Automatic differentiation for gradient-based samplers
-- **Multiple MCMC samplers**: Metropolis-Hastings and Hamiltonian Monte Carlo
+- **Multiple MCMC samplers**: Metropolis-Hastings, Hamiltonian Monte Carlo, and the No-U-Turn Sampler (NUTS)
 - **Rich distribution library**: Normal, Uniform, Beta, Gamma, Bernoulli, and more
 - **Posterior predictions**: Generate predictions with uncertainty from MCMC samples
 - **Model persistence**: Save and load traces and model configurations to JSON
@@ -30,7 +30,7 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 
 `@tangent.to/mc` ships a single browser-first build and uses
 [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor math
-and automatic differentiation. `tfjs` is a **peer dependency** — it is *not* bundled
+and automatic differentiation. `tfjs` is a **peer dependency** - it is *not* bundled
 into `mc`, so you load it once and share it (mixing two `tfjs` copies breaks tensor
 interop). See [Loading TensorFlow.js](#loading-tensorflowjs) below.
 
@@ -54,10 +54,10 @@ import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
 How you provide `tfjs` depends on whether you use a build step:
 
-**With a bundler** (Vite, webpack, esbuild, …) — install both packages and import as
+**With a bundler** (Vite, webpack, esbuild, …) - install both packages and import as
 usual; the bundler resolves `@tensorflow/tfjs` for you. Nothing else to do.
 
-**Without a build step** (plain `<script type="module">`, CDN) — bare imports don't
+**Without a build step** (plain `<script type="module">`, CDN) - bare imports don't
 resolve in the browser, so add an [import map](https://developer.mozilla.org/docs/Web/HTML/Element/script/type/importmap)
 *before* importing `mc`:
 
@@ -95,41 +95,33 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 Here's a simple Bayesian linear regression example:
 
 ```javascript
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
+import { Model, Normal, Uniform, MetropolisHastings, printSummary, tf } from '@tangent.to/mc';
 
-// Create model
+// Example data
+const x = [1, 2, 3, 4, 5];
+const y = [2.1, 3.9, 6.2, 7.8, 10.1];
+const xT = tf.tensor1d(x), yT = tf.tensor1d(y);
+
+// Create the model and its priors (options-object form; positional also works).
 const model = new Model({ name: 'linear_regression' });
+model.addVariable('alpha', new Normal({ mean: 0, sd: 10 }));
+model.addVariable('beta',  new Normal({ mean: 0, sd: 10 }));
+model.addVariable('sigma', new Uniform({ min: 0.01, max: 5 }));
 
-// Define priors (options-object form; positional `new Normal(0, 10, 'alpha')` also works)
-const alpha = new Normal({ mean: 0, sd: 10, name: 'alpha' });
-const beta = new Normal({ mean: 0, sd: 10, name: 'beta' });
-const sigma = new Uniform({ min: 0.01, max: 5, name: 'sigma' });
+// Likelihood as a POTENTIAL. The priors above are summed into the joint
+// automatically; `potential(name, fn)` adds the data term, with the deterministic
+// mean built from the latent parameters. Work in tensors so the gradient-based
+// samplers (HMC / NUTS) can differentiate through it, and so the term is vectorized.
+model.potential('y', (p) =>
+  new Normal(tf.add(tf.mul(p.beta, xT), p.alpha), p.sigma).logProb(yT));
 
-model.addVariable('alpha', alpha);
-model.addVariable('beta', beta);
-model.addVariable('sigma', sigma);
+// (Optional) record a post-hoc transform of the draws into the trace:
+// model.deterministic('mu_at_x3', (p) => p.alpha + p.beta * 3);
 
-// Define likelihood (connecting distributions in a DAG)
-model.logProb = function(params) {
-  let logProb = alpha.logProb(params.alpha)
-    .add(beta.logProb(params.beta))
-    .add(sigma.logProb(params.sigma));
-
-  // Add likelihood for observations
-  for (let i = 0; i < x.length; i++) {
-    const mu = params.alpha + params.beta * x[i];
-    const likelihood = new Normal(mu, params.sigma);
-    logProb = logProb.add(likelihood.logProb(y[i]));
-  }
-
-  return logProb;
-};
-
-// Run MCMC sampling (options-object form; positional args also work)
+// Run MCMC (options-object form; positional args also work).
 const sampler = new MetropolisHastings({ proposalStd: 0.5 });
-const trace = sampler.sample(model, initialValues, { nSamples: 1000, burnIn: 500, thin: 1 });
+const trace = sampler.sample(model, { alpha: 0, beta: 0, sigma: 1 }, { nSamples: 1000, burnIn: 500, thin: 1 });
 
-// Analyze results
 printSummary(trace);
 ```
 
@@ -149,19 +141,37 @@ const sampler = new mc.samplers.MetropolisHastings({ proposalStd: 0.5 });
 
 ### Models as DAGs
 
-Like PyMC, mc uses a Directed Acyclic Graph (DAG) structure to represent probabilistic models. Variables can depend on other variables, creating a natural flow from priors through transformations to likelihoods:
+A model's joint log-probability is the sum of (1) the priors of the registered
+variables and (2) any `potential` terms - generic log-density factors whose
+parameters are arbitrary deterministic functions of the latent variables and data.
+Dependencies between variables (hierarchies, transformed parameters) are expressed
+**inside a `potential`**, by computing the dependent quantity there - *not* by
+passing one distribution object as another distribution's parameter:
 
 ```javascript
-// Hyperpriors
-const mu_global = new Normal(0, 10);
-const sigma_global = new Uniform(0, 5);
+import { Model, Normal, tf } from '@tangent.to/mc';
 
-// Group-level parameters (depend on hyperpriors)
-const mu_group = new Normal(mu_global, sigma_global);
+const model = new Model('hierarchical');
+model.addVariable('mu_global', new Normal(0, 10));
+model.addVariable('log_sigma_global', new Normal(0, 1)); // unconstrained - see below
+model.addVariable('z', new Normal(0, 1));                // non-centred group offset
 
-// Observations (depend on group parameters)
-const y = new Normal(mu_group, sigma_obs);
+// The group mean depends on the hyperparameters - built in the potential:
+model.potential('y', (p) => {
+  const sigmaGlobal = tf.exp(p.log_sigma_global);
+  const muGroup = tf.add(p.mu_global, tf.mul(sigmaGlobal, p.z));
+  return new Normal(muGroup, sigmaObs).logProb(yT);
+});
 ```
+
+> **Sampler constraint (important).** The gradient samplers (`HMC`, `NUTS`) treat
+> every free variable as an unconstrained **scalar** and apply **no support
+> transforms**. A constrained prior (Beta, HalfNormal, Uniform, Lognormal) can wander
+> off its support and produce `NaN` gradients. The robust pattern is to declare
+> **unconstrained** latents - e.g. a `Normal` prior on `log_sigma` or `logit_p` - 
+> and apply `tf.exp` / `tf.sigmoid` **inside** the `potential`, which is equivalent
+> to a Lognormal / Beta prior on the natural parameter. (Metropolis-Hastings has no
+> such restriction - it rejects out-of-support proposals via the `-Infinity` logProb.)
 
 ### Distributions
 
@@ -175,6 +185,8 @@ Each constructor accepts positional arguments or an options object (shown second
 - **Uniform**: `new Uniform(lower, upper)` / `new Uniform({ min, max })` - Uniform distribution
 - **Beta**: `new Beta(alpha, beta)` / `new Beta({ alpha, beta })` - Beta distribution (for probabilities)
 - **Gamma**: `new Gamma(alpha, beta)` / `new Gamma({ shape, rate })` - Gamma distribution (for positive values)
+- **Lognormal**: `new Lognormal(mu, sigma)` / `new Lognormal({ mu, sigma })` - positive values (log-scale normal); a good prior for rates, scales, and plateaus
+- **HalfNormal**: `new HalfNormal(sigma)` / `new HalfNormal({ sigma })` - positive values concentrated near zero; a good prior for scale / standard-deviation parameters
 
 #### Discrete Distributions
 
@@ -323,12 +335,15 @@ const model = new Model(name)
 
 **Methods**:
 - `addVariable(name, distribution, observed)` - Add a variable to the model
+- `potential(name, fn)` - Add a generic log-density term (likelihood / factor); `fn(params)` returns a log-density tensor
+- `deterministic(name, fn)` - Register a post-hoc transform of the draws; recorded into the trace by the samplers
 - `getVariable(name)` - Retrieve a variable
 - `logProb(params)` - Compute log probability
 - `logProbAndGradient(params)` - Compute log prob and gradients
 - `samplePrior(nSamples)` - Sample from prior distributions
 - `getFreeVariableNames()` - Get unobserved variable names
-- `summary()` - Print model structure
+- `computeDeterministics(trace)` - Append deterministic columns to a trace (called automatically by samplers)
+- `summary()` - Return a string summary of the model structure
 
 ### Distribution Classes
 
@@ -375,7 +390,7 @@ class NUTS {
 ## Browser & ObservableHQ
 
 `mc` is a single browser-first build that runs the same in the browser, Node, and
-ObservableHQ — see [Installation](#installation) for loading `tfjs`. In Observable:
+ObservableHQ - see [Installation](#installation) for loading `tfjs`. In Observable:
 
 ```javascript
 mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
@@ -387,7 +402,7 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 **Notes for browser/Observable use**:
-- `tfjs` runs on its CPU/WebGL backend (there is no `@tensorflow/tfjs-node` — the
+- `tfjs` runs on its CPU/WebGL backend (there is no `@tensorflow/tfjs-node` - the
   single build uses `@tensorflow/tfjs` everywhere), which enables interactive
   visualization.
 - File-based persistence (`saveTrace`, `loadTrace`) is Node-only (`node:fs`) and is
@@ -410,7 +425,7 @@ mc leverages TensorFlow.js for:
 | Language | Python | JavaScript |
 | Backend | Aesara/JAX | TensorFlow.js |
 | DAG Structure | Yes | Yes |
-| MCMC Samplers | NUTS, HMC, MH | HMC, MH |
+| MCMC Samplers | NUTS, HMC, MH | NUTS, HMC, MH |
 | Variational Inference | Yes | Planned |
 | GPU Support | Yes | Browser only (TF.js WebGL) |
 
@@ -456,10 +471,15 @@ Apache-2.0
 
 ## Roadmap
 
-**Completed in v0.2.0**:
+**Done**:
 - [x] Posterior predictive sampling
 - [x] Model persistence (save/load)
 - [x] Browser/Observable support
+- [x] No-U-Turn Sampler (NUTS) with dual-averaging step-size adaptation
+- [x] Convergence diagnostics (Gelman-Rubin R-hat, effective sample size)
+- [x] Namespaced + flat + default exports and options-object constructors (aligned with `@tangent.to/ds`)
+- [x] Lognormal and HalfNormal distributions
+- [x] Post-hoc deterministics recorded into the trace
 
 **Planned**:
 - [ ] Additional distributions (Poisson, Student-t, Exponential)
@@ -488,7 +508,7 @@ If you use mc in your research, please cite:
 ```bibtex
 @software{mc,
   title = {mc: JavaScript Markov Chain Monte Carlo},
-  author = {},
+  author = {tangent-to},
   year = {2025},
   url = {https://github.com/tangent-to/mc}
 }
