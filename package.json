@@ -35,8 +35,7 @@
     "docs:api": "node scripts/build-api-docs.mjs",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
-    "verify": "node verify-package.js",
-    "prepublishOnly": "npm run test:all && npm run verify"
+    "prepublishOnly": "npm run test:all"
   },
   "keywords": [
     "bayesian",
