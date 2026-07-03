@@ -27,10 +27,12 @@ for tensor math and automatic differentiation (used by the gradient-based sample
 ## Quick example
 
 Estimate the mean of some noisy data with a Normal prior, a Normal likelihood, and
-Metropolis-Hastings:
+Metropolis-Hastings. No install and no build step - import straight from a CDN and it
+runs the same in the browser, an Observable cell, or Deno:
 
 ```javascript
-import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
+import { Model, Normal, MetropolisHastings, printSummary }
+  from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
 
 const data = [4.9, 5.2, 4.7, 5.5, 5.1, 4.8];
 

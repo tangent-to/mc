@@ -18,7 +18,7 @@ function tracePlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:23](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L23)
+Defined in: [utils/visualize.js:23](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L23)
 
 Generate trace plot specification
 Shows the sampled values over iterations to assess convergence
@@ -60,7 +60,7 @@ function posteriorPlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:106](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L106)
+Defined in: [utils/visualize.js:106](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L106)
 
 Generate posterior distribution plot specification
 Shows histograms and KDE of posterior samples
@@ -103,7 +103,7 @@ function autocorrPlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:213](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L213)
+Defined in: [utils/visualize.js:213](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L213)
 
 Generate autocorrelation plot specification
 Shows autocorrelation to assess mixing
@@ -151,7 +151,7 @@ function pairPlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:315](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L315)
+Defined in: [utils/visualize.js:315](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L315)
 
 Generate pair plot specification (scatter plot matrix)
 Shows relationships between parameters
@@ -194,7 +194,7 @@ function forestPlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:395](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L395)
+Defined in: [utils/visualize.js:395](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L395)
 
 Generate forest plot specification
 Shows posterior summaries with credible intervals
@@ -242,7 +242,7 @@ function rankPlot(
    options?): Object;
 ```
 
-Defined in: [utils/visualize.js:489](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/visualize.js#L489)
+Defined in: [utils/visualize.js:489](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/visualize.js#L489)
 
 Generate rank plot specification (for convergence diagnostics)
 Useful for detecting non-stationarity and comparing chains

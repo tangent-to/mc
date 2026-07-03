@@ -15,7 +15,7 @@ permalink: /api/utils-trace
 function summarize(samples): Object;
 ```
 
-Defined in: [utils/trace.js:10](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L10)
+Defined in: [utils/trace.js:10](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L10)
 
 Compute summary statistics for a trace
 
@@ -41,7 +41,7 @@ Summary statistics
 function effectiveSampleSize(samples): number;
 ```
 
-Defined in: [utils/trace.js:39](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L39)
+Defined in: [utils/trace.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L39)
 
 Compute effective sample size (ESS) using autocorrelation
 
@@ -67,7 +67,7 @@ Effective sample size
 function gelmanRubin(chains): number;
 ```
 
-Defined in: [utils/trace.js:76](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L76)
+Defined in: [utils/trace.js:76](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L76)
 
 Compute the Gelman-Rubin diagnostic (R-hat) for convergence
 Requires multiple chains
@@ -94,7 +94,7 @@ R-hat statistic
 function printSummary(trace): void;
 ```
 
-Defined in: [utils/trace.js:113](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L113)
+Defined in: [utils/trace.js:113](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L113)
 
 Print trace summary for all variables
 
@@ -118,7 +118,7 @@ Trace object from sampling
 function traceToJSON(trace): string;
 ```
 
-Defined in: [utils/trace.js:138](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L138)
+Defined in: [utils/trace.js:138](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L138)
 
 Export trace to JSON format
 
@@ -144,7 +144,7 @@ JSON string
 function traceToCSV(samples): string;
 ```
 
-Defined in: [utils/trace.js:147](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/trace.js#L147)
+Defined in: [utils/trace.js:147](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/trace.js#L147)
 
 Save trace to CSV format (for a single variable)
 

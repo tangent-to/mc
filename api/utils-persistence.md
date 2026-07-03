@@ -15,7 +15,7 @@ permalink: /api/utils-persistence
 function saveTrace(trace, filepath): void;
 ```
 
-Defined in: [utils/persistence.js:8](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L8)
+Defined in: [utils/persistence.js:8](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L8)
 
 Save trace data to JSON file
 
@@ -45,7 +45,7 @@ Path to save the file
 function loadTrace(filepath): Object;
 ```
 
-Defined in: [utils/persistence.js:27](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L27)
+Defined in: [utils/persistence.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L27)
 
 Load trace data from JSON file
 
@@ -71,7 +71,7 @@ Trace object
 function saveModelConfig(model, filepath): void;
 ```
 
-Defined in: [utils/persistence.js:39](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L39)
+Defined in: [utils/persistence.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L39)
 
 Save model configuration to JSON
 Note: This saves the model structure, not the trained parameters
@@ -105,7 +105,7 @@ function saveModelState(
    filepath): void;
 ```
 
-Defined in: [utils/persistence.js:65](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L65)
+Defined in: [utils/persistence.js:65](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L65)
 
 Save complete model state (config + trace)
 
@@ -141,7 +141,7 @@ Path to save the file
 function loadModelState(filepath): Object;
 ```
 
-Defined in: [utils/persistence.js:97](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L97)
+Defined in: [utils/persistence.js:97](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L97)
 
 Load model state from file
 
@@ -167,7 +167,7 @@ Path to the file
 function saveTraceCSV(trace, filepath): void;
 ```
 
-Defined in: [utils/persistence.js:108](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L108)
+Defined in: [utils/persistence.js:108](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L108)
 
 Save trace to CSV format (for external analysis tools)
 
@@ -197,7 +197,7 @@ Path to save the file
 function exportTraceForBrowser(trace): string;
 ```
 
-Defined in: [utils/persistence.js:135](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L135)
+Defined in: [utils/persistence.js:135](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L135)
 
 Export trace for browser environments (no fs dependency)
 Returns a downloadable blob URL
@@ -224,7 +224,7 @@ JSON string for download
 function importTraceFromJSON(jsonString): Object;
 ```
 
-Defined in: [utils/persistence.js:153](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/utils/persistence.js#L153)
+Defined in: [utils/persistence.js:153](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/utils/persistence.js#L153)
 
 Import trace from JSON string (browser-compatible)
 

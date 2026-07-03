@@ -20,24 +20,35 @@ linear regression from priors to posterior summary.
 
 ## Installation
 
-`@tangent.to/mc` ships a single browser-first build and uses
-[TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor math
-and automatic differentiation. **`tfjs` is a peer dependency** - it is *not* bundled,
-so you install or load it once and share it. Mixing two copies of `tfjs` breaks
-tensor interop.
+`@tangent.to/mc` ships a single browser-first build, so the fastest way to run it is a
+direct ESM import from a CDN - no install and no build step. It is also published to
+npm and JSR for bundler and Node projects.
 
-### Node.js / npm
+It uses [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor
+math and automatic differentiation. `tfjs` is a **peer dependency**: it is not bundled,
+so it is loaded once and shared (mixing two copies breaks tensor interop). On a CDN the
+`+esm` endpoint resolves it for you; with a bundler you install it alongside `mc`.
 
-```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+### Browser / CDN (no build step)
+
+jsDelivr's `+esm` endpoint auto-resolves `tfjs`, so a single import works in a plain
+`<script type="module">` - nothing else to load:
+
+```html
+<script type="module">
+  import { Model, Normal, MetropolisHastings, printSummary }
+    from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
+  // ... build and sample your model
+</script>
 ```
+
+### Observable
+
+The same single import works in an Observable cell:
 
 ```javascript
-import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
-
-A bundler (Vite, webpack, esbuild, …) resolves the `@tensorflow/tfjs` peer dependency
-for you - nothing else to do.
 
 ### Deno
 
@@ -47,41 +58,25 @@ import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
 import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 ```
 
-### Browser / CDN (no build step)
+### Node.js / npm / bundlers
 
-Bare specifiers like `@tensorflow/tfjs` don't resolve in the browser, so add an
-[import map](https://developer.mozilla.org/docs/Web/HTML/Element/script/type/importmap)
-*before* importing `mc`:
+For a bundler (Vite, webpack, esbuild, …) or a Node project, install `mc` with the
+`tfjs` peer dependency alongside it:
 
-```html
-<script type="importmap">
-{
-  "imports": {
-    "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/+esm"
-  }
-}
-</script>
-<script type="module">
-  import { Model, Normal, MetropolisHastings, printSummary }
-    from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
-  // ... build and sample your model
-</script>
+```bash
+npm install @tangent.to/mc @tensorflow/tfjs
 ```
 
-`mc` also re-exports the shared `tf` instance, so you can build tensors with the
-exact copy the library uses:
+```javascript
+import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
+```
+
+The bundler resolves the peer dependency for you - nothing else to do. `mc` also
+re-exports the shared `tf` instance, so you can build tensors with the exact copy the
+library uses:
 
 ```javascript
 import { tf } from '@tangent.to/mc';
-```
-
-### Observable
-
-jsDelivr's `+esm` endpoint auto-resolves the `tfjs` dependency, so a single import
-works in an Observable notebook:
-
-```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ## Import styles

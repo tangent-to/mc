@@ -11,7 +11,7 @@ permalink: /api/distributions
 
 ### Distribution
 
-Defined in: [distributions/base.js:27](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L27)
+Defined in: [distributions/base.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L27)
 
 Base class for probability distributions.
 Provides common interface for all distributions.
@@ -34,7 +34,7 @@ Provides common interface for all distributions.
 new Distribution(name?): Distribution;
 ```
 
-Defined in: [distributions/base.js:28](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L28)
+Defined in: [distributions/base.js:28](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L28)
 
 ###### Parameters
 
@@ -54,7 +54,7 @@ Defined in: [distributions/base.js:28](https://github.com/tangent-to/mc/blob/6c1
 name: string;
 ```
 
-Defined in: [distributions/base.js:29](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L29)
+Defined in: [distributions/base.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L29)
 
 ##### observed
 
@@ -62,7 +62,7 @@ Defined in: [distributions/base.js:29](https://github.com/tangent-to/mc/blob/6c1
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 #### Methods
 
@@ -72,7 +72,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:38](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L38)
+Defined in: [distributions/base.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L38)
 
 Log probability density/mass function
 
@@ -96,7 +96,7 @@ Log probability
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -123,7 +123,7 @@ Probability density/mass
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:60](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L60)
+Defined in: [distributions/base.js:60](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L60)
 
 Sample from the distribution
 
@@ -147,7 +147,7 @@ Samples
 observe(data): Distribution;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -169,7 +169,7 @@ Observed data
 getParams(): Object;
 ```
 
-Defined in: [distributions/base.js:78](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L78)
+Defined in: [distributions/base.js:78](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L78)
 
 Get the distribution's parameters as a plain object.
 Subclasses override to expose their specific parameters.
@@ -184,7 +184,7 @@ Parameters
 
 ### Bernoulli
 
-Defined in: [distributions/bernoulli.js:7](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L7)
+Defined in: [distributions/bernoulli.js:7](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L7)
 
 Bernoulli distribution for binary outcomes
 
@@ -200,7 +200,7 @@ Bernoulli distribution for binary outcomes
 new Bernoulli(p?, name?): Bernoulli;
 ```
 
-Defined in: [distributions/bernoulli.js:20](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L20)
+Defined in: [distributions/bernoulli.js:20](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L20)
 
 Accepts either positional arguments or a single options object.
 
@@ -245,7 +245,7 @@ new Bernoulli({ p: 0.7 })
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -257,7 +257,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/bernoulli.js:24](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L24)
+Defined in: [distributions/bernoulli.js:24](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L24)
 
 ###### Inherited from
 
@@ -269,7 +269,7 @@ Defined in: [distributions/bernoulli.js:24](https://github.com/tangent-to/mc/blo
 p: Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/bernoulli.js:27](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L27)
+Defined in: [distributions/bernoulli.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L27)
 
 #### Methods
 
@@ -279,7 +279,7 @@ Defined in: [distributions/bernoulli.js:27](https://github.com/tangent-to/mc/blo
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -310,7 +310,7 @@ Probability density/mass
 observe(data): Bernoulli;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -336,7 +336,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/bernoulli.js:35](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L35)
+Defined in: [distributions/bernoulli.js:35](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L35)
 
 Log probability mass function
 
@@ -364,7 +364,7 @@ Log probability
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/bernoulli.js:55](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L55)
+Defined in: [distributions/bernoulli.js:55](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L55)
 
 Sample from the Bernoulli distribution
 
@@ -392,7 +392,7 @@ Samples (0 or 1)
 mean(): Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/bernoulli.js:66](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L66)
+Defined in: [distributions/bernoulli.js:66](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L66)
 
 Get the mean of the distribution
 
@@ -406,7 +406,7 @@ Get the mean of the distribution
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/bernoulli.js:73](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L73)
+Defined in: [distributions/bernoulli.js:73](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L73)
 
 Get the variance of the distribution
 
@@ -420,7 +420,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/bernoulli.js:81](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/bernoulli.js#L81)
+Defined in: [distributions/bernoulli.js:81](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L81)
 
 Get the distribution's parameters.
 
@@ -442,7 +442,7 @@ p: number;
 
 ### Beta
 
-Defined in: [distributions/beta.js:8](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L8)
+Defined in: [distributions/beta.js:8](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L8)
 
 Beta distribution (useful for modeling probabilities)
 
@@ -461,7 +461,7 @@ new Beta(
    name?): Beta;
 ```
 
-Defined in: [distributions/beta.js:22](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L22)
+Defined in: [distributions/beta.js:22](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L22)
 
 Accepts either positional arguments or a single options object.
 
@@ -512,7 +512,7 @@ new Beta({ alpha: 2, beta: 5 })
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -524,7 +524,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L26)
+Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L26)
 
 ###### Inherited from
 
@@ -536,7 +536,7 @@ Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/6c1
 alpha: Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/beta.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L30)
+Defined in: [distributions/beta.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L30)
 
 ##### beta
 
@@ -544,7 +544,7 @@ Defined in: [distributions/beta.js:30](https://github.com/tangent-to/mc/blob/6c1
 beta: Tensor<Rank> | undefined;
 ```
 
-Defined in: [distributions/beta.js:31](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L31)
+Defined in: [distributions/beta.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L31)
 
 #### Methods
 
@@ -554,7 +554,7 @@ Defined in: [distributions/beta.js:31](https://github.com/tangent-to/mc/blob/6c1
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -585,7 +585,7 @@ Probability density/mass
 observe(data): Beta;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -611,7 +611,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/beta.js:39](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L39)
+Defined in: [distributions/beta.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L39)
 
 Log probability density function
 
@@ -639,7 +639,7 @@ Log probability
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/beta.js:69](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L69)
+Defined in: [distributions/beta.js:69](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L69)
 
 Sample from the beta distribution
 Uses the relationship: if X ~ Gamma(α) and Y ~ Gamma(β), then X/(X+Y) ~ Beta(α, β)
@@ -668,7 +668,7 @@ Samples
 mean(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/beta.js:90](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L90)
+Defined in: [distributions/beta.js:90](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L90)
 
 Get the mean of the distribution
 
@@ -682,7 +682,7 @@ Get the mean of the distribution
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/beta.js:97](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L97)
+Defined in: [distributions/beta.js:97](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L97)
 
 Get the variance of the distribution
 
@@ -696,7 +696,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/beta.js:110](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/beta.js#L110)
+Defined in: [distributions/beta.js:110](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L110)
 
 Get the distribution's parameters.
 
@@ -724,7 +724,7 @@ beta: number;
 
 ### Gamma
 
-Defined in: [distributions/gamma.js:8](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L8)
+Defined in: [distributions/gamma.js:8](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L8)
 
 Gamma distribution (useful for modeling positive continuous values)
 
@@ -743,7 +743,7 @@ new Gamma(
    name?): Gamma;
 ```
 
-Defined in: [distributions/gamma.js:22](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L22)
+Defined in: [distributions/gamma.js:22](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L22)
 
 Accepts either positional arguments or a single options object.
 
@@ -794,7 +794,7 @@ new Gamma({ shape: 2, rate: 1 })
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -806,7 +806,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/gamma.js:26](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L26)
+Defined in: [distributions/gamma.js:26](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L26)
 
 ###### Inherited from
 
@@ -818,7 +818,7 @@ Defined in: [distributions/gamma.js:26](https://github.com/tangent-to/mc/blob/6c
 alpha: Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/gamma.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L30)
+Defined in: [distributions/gamma.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L30)
 
 ##### beta
 
@@ -826,7 +826,7 @@ Defined in: [distributions/gamma.js:30](https://github.com/tangent-to/mc/blob/6c
 beta: Tensor<Rank> | undefined;
 ```
 
-Defined in: [distributions/gamma.js:31](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L31)
+Defined in: [distributions/gamma.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L31)
 
 #### Methods
 
@@ -836,7 +836,7 @@ Defined in: [distributions/gamma.js:31](https://github.com/tangent-to/mc/blob/6c
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -867,7 +867,7 @@ Probability density/mass
 observe(data): Gamma;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -893,7 +893,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/gamma.js:39](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L39)
+Defined in: [distributions/gamma.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L39)
 
 Log probability density function
 
@@ -921,7 +921,7 @@ Log probability
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/gamma.js:75](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L75)
+Defined in: [distributions/gamma.js:75](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L75)
 
 Sample from the gamma distribution
 
@@ -949,7 +949,7 @@ Samples
 mean(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/gamma.js:96](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L96)
+Defined in: [distributions/gamma.js:96](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L96)
 
 Get the mean of the distribution
 
@@ -963,7 +963,7 @@ Get the mean of the distribution
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/gamma.js:103](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L103)
+Defined in: [distributions/gamma.js:103](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L103)
 
 Get the variance of the distribution
 
@@ -977,7 +977,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/gamma.js:111](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/gamma.js#L111)
+Defined in: [distributions/gamma.js:111](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L111)
 
 Get the distribution's parameters.
 
@@ -1005,7 +1005,7 @@ beta: number;
 
 ### HalfNormal
 
-Defined in: [distributions/halfnormal.js:19](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L19)
+Defined in: [distributions/halfnormal.js:19](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L19)
 
 Half-normal distribution
 
@@ -1035,7 +1035,7 @@ $$
 new HalfNormal(sigma?, name?): HalfNormal;
 ```
 
-Defined in: [distributions/halfnormal.js:24](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L24)
+Defined in: [distributions/halfnormal.js:24](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L24)
 
 ###### Parameters
 
@@ -1067,7 +1067,7 @@ Name of the distribution
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -1079,7 +1079,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/halfnormal.js:28](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L28)
+Defined in: [distributions/halfnormal.js:28](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L28)
 
 ###### Inherited from
 
@@ -1091,7 +1091,7 @@ Defined in: [distributions/halfnormal.js:28](https://github.com/tangent-to/mc/bl
 sigma: Tensor<Rank>;
 ```
 
-Defined in: [distributions/halfnormal.js:31](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L31)
+Defined in: [distributions/halfnormal.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L31)
 
 #### Methods
 
@@ -1101,7 +1101,7 @@ Defined in: [distributions/halfnormal.js:31](https://github.com/tangent-to/mc/bl
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -1132,7 +1132,7 @@ Probability density/mass
 observe(data): HalfNormal;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -1158,7 +1158,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/halfnormal.js:47](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L47)
+Defined in: [distributions/halfnormal.js:47](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L47)
 
 Log probability density function.
 
@@ -1193,7 +1193,7 @@ Log probability density
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/halfnormal.js:66](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L66)
+Defined in: [distributions/halfnormal.js:66](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L66)
 
 Sample from the half-normal distribution: $|\sigma Z|$, $Z \sim \mathcal{N}(0,1)$.
 
@@ -1221,7 +1221,7 @@ Samples
 mean(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/halfnormal.js:78](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L78)
+Defined in: [distributions/halfnormal.js:78](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L78)
 
 Mean of the distribution: $\sigma\sqrt{2/\pi}$.
 
@@ -1237,7 +1237,7 @@ The mean
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/halfnormal.js:86](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L86)
+Defined in: [distributions/halfnormal.js:86](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L86)
 
 Variance of the distribution: sigma^2 * (1 - 2/pi).
 
@@ -1253,7 +1253,7 @@ The variance
 getParams(): object;
 ```
 
-Defined in: [distributions/halfnormal.js:94](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/halfnormal.js#L94)
+Defined in: [distributions/halfnormal.js:94](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L94)
 
 Get the distribution's parameters.
 
@@ -1275,7 +1275,7 @@ sigma: number;
 
 ### Lognormal
 
-Defined in: [distributions/lognormal.js:21](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L21)
+Defined in: [distributions/lognormal.js:21](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L21)
 
 Log-normal distribution
 
@@ -1310,7 +1310,7 @@ new Lognormal(
    name?): Lognormal;
 ```
 
-Defined in: [distributions/lognormal.js:27](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L27)
+Defined in: [distributions/lognormal.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L27)
 
 ###### Parameters
 
@@ -1348,7 +1348,7 @@ Name of the distribution
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -1360,7 +1360,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/lognormal.js:31](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L31)
+Defined in: [distributions/lognormal.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L31)
 
 ###### Inherited from
 
@@ -1372,7 +1372,7 @@ Defined in: [distributions/lognormal.js:31](https://github.com/tangent-to/mc/blo
 mu: Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:35](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L35)
+Defined in: [distributions/lognormal.js:35](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L35)
 
 ##### sigma
 
@@ -1380,7 +1380,7 @@ Defined in: [distributions/lognormal.js:35](https://github.com/tangent-to/mc/blo
 sigma: Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:36](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L36)
+Defined in: [distributions/lognormal.js:36](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L36)
 
 #### Methods
 
@@ -1390,7 +1390,7 @@ Defined in: [distributions/lognormal.js:36](https://github.com/tangent-to/mc/blo
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -1421,7 +1421,7 @@ Probability density/mass
 observe(data): Lognormal;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -1447,7 +1447,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:50](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L50)
+Defined in: [distributions/lognormal.js:50](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L50)
 
 Log probability density function.
 
@@ -1480,7 +1480,7 @@ Log probability density
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:69](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L69)
+Defined in: [distributions/lognormal.js:69](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L69)
 
 Sample from the log-normal distribution: $\exp(\mu + \sigma Z)$, $Z \sim \mathcal{N}(0,1)$.
 
@@ -1508,7 +1508,7 @@ Samples
 mean(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:81](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L81)
+Defined in: [distributions/lognormal.js:81](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L81)
 
 Mean of the distribution: $\exp(\mu + \sigma^2/2)$.
 
@@ -1524,7 +1524,7 @@ The mean
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/lognormal.js:89](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L89)
+Defined in: [distributions/lognormal.js:89](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L89)
 
 Variance of the distribution: (exp(sigma^2) - 1) * exp(2*mu + sigma^2).
 
@@ -1540,7 +1540,7 @@ The variance
 getParams(): object;
 ```
 
-Defined in: [distributions/lognormal.js:100](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/lognormal.js#L100)
+Defined in: [distributions/lognormal.js:100](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L100)
 
 Get the distribution's parameters.
 
@@ -1568,7 +1568,7 @@ sigma: number;
 
 ### Normal
 
-Defined in: [distributions/normal.js:14](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L14)
+Defined in: [distributions/normal.js:14](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L14)
 
 Normal (Gaussian) distribution
 
@@ -1596,7 +1596,7 @@ new Normal(
    name?): Normal;
 ```
 
-Defined in: [distributions/normal.js:29](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L29)
+Defined in: [distributions/normal.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L29)
 
 Accepts either positional arguments or a single options object, matching the
 dual-constructor convention of `@tangent.to/ds`.
@@ -1648,7 +1648,7 @@ new Normal({ mean: 0, sd: 1 })
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -1660,7 +1660,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/normal.js:33](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L33)
+Defined in: [distributions/normal.js:33](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L33)
 
 ###### Inherited from
 
@@ -1672,7 +1672,7 @@ Defined in: [distributions/normal.js:33](https://github.com/tangent-to/mc/blob/6
 mu: Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/normal.js:37](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L37)
+Defined in: [distributions/normal.js:37](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L37)
 
 ##### sigma
 
@@ -1680,7 +1680,7 @@ Defined in: [distributions/normal.js:37](https://github.com/tangent-to/mc/blob/6
 sigma: Tensor<Rank> | undefined;
 ```
 
-Defined in: [distributions/normal.js:38](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L38)
+Defined in: [distributions/normal.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L38)
 
 #### Methods
 
@@ -1690,7 +1690,7 @@ Defined in: [distributions/normal.js:38](https://github.com/tangent-to/mc/blob/6
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -1721,7 +1721,7 @@ Probability density/mass
 observe(data): Normal;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -1747,7 +1747,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/normal.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L51)
+Defined in: [distributions/normal.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L51)
 
 Log probability density function
 
@@ -1779,7 +1779,7 @@ Log probability
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/normal.js:71](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L71)
+Defined in: [distributions/normal.js:71](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L71)
 
 Sample from the normal distribution
 
@@ -1807,7 +1807,7 @@ Samples
 mean(): Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/normal.js:82](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L82)
+Defined in: [distributions/normal.js:82](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L82)
 
 Get the mean of the distribution
 
@@ -1821,7 +1821,7 @@ Get the mean of the distribution
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/normal.js:89](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L89)
+Defined in: [distributions/normal.js:89](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L89)
 
 Get the variance of the distribution
 
@@ -1835,7 +1835,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/normal.js:97](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/normal.js#L97)
+Defined in: [distributions/normal.js:97](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L97)
 
 Get the distribution's parameters.
 
@@ -1863,7 +1863,7 @@ sigma: number;
 
 ### Uniform
 
-Defined in: [distributions/uniform.js:7](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L7)
+Defined in: [distributions/uniform.js:7](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L7)
 
 Uniform distribution
 
@@ -1882,7 +1882,7 @@ new Uniform(
    name?): Uniform;
 ```
 
-Defined in: [distributions/uniform.js:21](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L21)
+Defined in: [distributions/uniform.js:21](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L21)
 
 Accepts either positional arguments or a single options object.
 
@@ -1933,7 +1933,7 @@ new Uniform({ min: 0, max: 1 })
 observed: Tensor<Rank> | null;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
 
 ###### Inherited from
 
@@ -1945,7 +1945,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/6c1
 name: any;
 ```
 
-Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L25)
+Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L25)
 
 ###### Inherited from
 
@@ -1957,7 +1957,7 @@ Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/
 lower: Object | Tensor<Rank>;
 ```
 
-Defined in: [distributions/uniform.js:29](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L29)
+Defined in: [distributions/uniform.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L29)
 
 ##### upper
 
@@ -1965,7 +1965,7 @@ Defined in: [distributions/uniform.js:29](https://github.com/tangent-to/mc/blob/
 upper: Tensor<Rank> | undefined;
 ```
 
-Defined in: [distributions/uniform.js:30](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L30)
+Defined in: [distributions/uniform.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L30)
 
 #### Methods
 
@@ -1975,7 +1975,7 @@ Defined in: [distributions/uniform.js:30](https://github.com/tangent-to/mc/blob/
 pdf(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
 
 Probability density/mass function
 
@@ -2006,7 +2006,7 @@ Probability density/mass
 observe(data): Uniform;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
 
 Set observed data for this distribution
 
@@ -2032,7 +2032,7 @@ Observed data
 logProb(value): Tensor<Rank>;
 ```
 
-Defined in: [distributions/uniform.js:38](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L38)
+Defined in: [distributions/uniform.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L38)
 
 Log probability density function
 
@@ -2060,7 +2060,7 @@ Log probability
 sample(shape?): Tensor<Rank>;
 ```
 
-Defined in: [distributions/uniform.js:60](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L60)
+Defined in: [distributions/uniform.js:60](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L60)
 
 Sample from the uniform distribution
 
@@ -2088,7 +2088,7 @@ Samples
 mean(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/uniform.js:72](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L72)
+Defined in: [distributions/uniform.js:72](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L72)
 
 Get the mean of the distribution
 
@@ -2102,7 +2102,7 @@ Get the mean of the distribution
 variance(): Tensor<Rank>;
 ```
 
-Defined in: [distributions/uniform.js:79](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L79)
+Defined in: [distributions/uniform.js:79](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L79)
 
 Get the variance of the distribution
 
@@ -2116,7 +2116,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/uniform.js:88](https://github.com/tangent-to/mc/blob/6c1d7b7484a03ef091fe7b86e6f9a2bdd1631dab/src/distributions/uniform.js#L88)
+Defined in: [distributions/uniform.js:88](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L88)
 
 Get the distribution's parameters.
 
