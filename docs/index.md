@@ -1,120 +1,66 @@
 ---
-layout: default
+layout: home
 title: Home
+nav_order: 1
+description: "A PyMC-inspired Markov Chain Monte Carlo library for Bayesian inference in JavaScript, built on TensorFlow.js."
+permalink: /
 ---
 
 # @tangent.to/mc
+{: .fs-9 }
 
-**JavaScript Markov Chain Monte Carlo** - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript.
+Probabilistic programming and Bayesian inference in JavaScript - define models as
+directed acyclic graphs and fit them with Markov Chain Monte Carlo.
+{: .fs-6 .fw-300 }
 
-[![npm version](https://img.shields.io/npm/v/@tangent.to/mc.svg)](https://www.npmjs.com/package/@tangent.to/mc)
-[![JSR](https://jsr.io/badges/@tangent/mc)](https://jsr.io/@tangent/mc)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[Get Started](getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[View on GitHub](https://github.com/tangent-to/mc){: .btn .fs-5 .mb-4 .mb-md-0 }
 
-## Quick Start
+---
 
-### Installation
+`@tangent.to/mc` brings PyMC-style Bayesian modelling to JavaScript. You describe a
+model by declaring prior distributions and a likelihood, then draw posterior samples
+with one of several MCMC samplers - all running the same in Node.js, the browser,
+Deno, and Observable. It is built on [TensorFlow.js](https://www.tensorflow.org/js)
+for tensor math and automatic differentiation (used by the gradient-based samplers).
 
-`@tensorflow/tfjs` is a peer dependency (not bundled) — bundlers resolve it
-automatically, and jsDelivr's `+esm` endpoint auto-resolves it for Observable.
+## Quick example
 
-**Node.js / npm:**
-```bash
-npm install @tangent.to/mc @tensorflow/tfjs
-```
+Estimate the mean of some noisy data with a Normal prior, a Normal likelihood, and
+Metropolis-Hastings:
 
-**Deno:**
-```typescript
-import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
-```
-
-**Observable:**
 ```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
+import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
+
+const data = [4.9, 5.2, 4.7, 5.5, 5.1, 4.8];
+
+const model = new Model('mean_estimate');
+model.addVariable('mu', new Normal({ mean: 0, sd: 10, name: 'mu' }));
+model.potential('likelihood', (p) => new Normal(p.mu, 1).logProb(data));
+
+const trace = new MetropolisHastings({ proposalStd: 0.4 })
+  .sample(model, { mu: 0 }, { nSamples: 2000, burnIn: 1000 });
+
+printSummary(trace);
 ```
 
 ## Features
 
-- **PyMC-like DAG structure** - Define models by connecting distributions in a directed acyclic graph
-- **TensorFlow.js integration** - Automatic differentiation for gradient-based samplers
-- **Multiple MCMC samplers** - Metropolis-Hastings and Hamiltonian Monte Carlo
-- **Rich distribution library** - Normal, Uniform, Beta, Gamma, Bernoulli, and more
-- **Posterior predictions** - Generate predictions with uncertainty from MCMC samples
-- **Model persistence** - Save and load traces and model configurations to JSON
-- **Browser compatible** - Run in Node.js or in the browser (including ObservableHQ)
+- **PyMC-like DAG models** - connect prior distributions and likelihood terms into a
+  directed acyclic graph with `Model`, `addVariable`, and `potential`.
+- **A library of distributions** - Normal, Uniform, Beta, Gamma, Bernoulli,
+  Lognormal, and HalfNormal.
+- **Multiple MCMC samplers** - Metropolis-Hastings, Hamiltonian Monte Carlo, NUTS,
+  and a vector-aware HMC for hierarchical models.
+- **Diagnostics built in** - posterior summaries, effective sample size, and
+  Gelman-Rubin (R-hat) convergence checks.
+- **Visualization specs** - trace, posterior, autocorrelation, pair, forest, and
+  rank plots ready for Observable Plot.
+- **Runs everywhere** - a single browser-first build for Node.js, the browser, Deno,
+  and Observable, with `@tensorflow/tfjs` as a shared peer dependency.
 
-## Example: Bayesian Linear Regression
+## Where to next
 
-```javascript
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
-
-// Create model
-const model = new Model('linear_regression');
-
-// Define priors
-const alpha = new Normal(0, 10, 'alpha');
-const beta = new Normal(0, 10, 'beta');
-const sigma = new Uniform(0.01, 5, 'sigma');
-
-model.addVariable('alpha', alpha);
-model.addVariable('beta', beta);
-model.addVariable('sigma', sigma);
-
-// Define likelihood
-model.logProb = function(params) {
-  let logProb = alpha.logProb(params.alpha)
-    .add(beta.logProb(params.beta))
-    .add(sigma.logProb(params.sigma));
-
-  for (let i = 0; i < x.length; i++) {
-    const mu = params.alpha + params.beta * x[i];
-    const likelihood = new Normal(mu, params.sigma);
-    logProb = logProb.add(likelihood.logProb(y[i]));
-  }
-
-  return logProb;
-};
-
-// Run MCMC sampling
-const sampler = new MetropolisHastings(0.5);
-const trace = sampler.sample(model, initialValues, 1000, 500, 1);
-
-// Analyze results
-printSummary(trace);
-```
-
-## Documentation
-
-- [API Reference](api/)
-- [Distributions](api/distributions.html)
-- [Samplers](api/samplers.html)
-- [Platform Guides](PLATFORMS.html)
-
-## Mathematical Foundation
-
-### Bayesian Inference
-
-The goal is to compute the posterior distribution:
-
-$$
-p(\theta|y) = \frac{p(y|\theta)p(\theta)}{p(y)} \propto p(y|\theta)p(\theta)
-$$
-
-where:
-- $\theta$ are the model parameters
-- $y$ is the observed data
-- $p(\theta)$ is the prior distribution
-- $p(y|\theta)$ is the likelihood
-- $p(\theta|y)$ is the posterior distribution
-
-### MCMC Sampling
-
-Since the posterior is often intractable, we use Markov Chain Monte Carlo (MCMC) to generate samples from it. The samples $\theta^{(1)}, \theta^{(2)}, \ldots, \theta^{(N)}$ approximate the posterior distribution.
-
-## Contributing
-
-Contributions are welcome! Please see our [GitHub repository](https://github.com/tangent-to/mc).
-
-## License
-
-Apache-2.0
+- [Getting Started](getting-started) - install the library and fit your first model.
+- [API Reference](api) - the full API surface, grouped by area.
+- [Examples](examples) - complete worked models (regression, classification, hierarchical).
