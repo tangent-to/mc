@@ -1,0 +1,16 @@
+// tangent teal accent scheme for just-the-docs.
+// Palette (tangent):
+//   50 #effdf9  100 #cdf9ec  300 #5fe3c4  400 #28c9a8  500 #0fae8f
+//   600 #048b74  700 #076e5e  800 #0a574c  900 #0c483f
+// just-the-docs loads this on top of the default light scheme; we only re-point
+// the accent (links, primary button, active nav) from the stock purple to teal.
+
+$link-color:            #0fae8f; // teal 500 - body links
+$btn-primary-color:     #048b74; // teal 600 - primary buttons ("Get Started")
+$nav-child-link-color:  #076e5e; // teal 700 - sidebar child links
+$search-result-preview-color: #6b7280;
+
+// Active / hover accents (sidebar item, in-page nav) and code tint.
+$sidebar-color:         #f6faf8;
+$code-background-color:  #f2fbf8; // very light teal (teal 50-ish)
+$feedback-color:        darken(#effdf9, 3%);
