@@ -14,8 +14,8 @@ repository: tangent-to/mc
 remote_theme: just-the-docs/just-the-docs
 color_scheme: teal
 
-# Logo
-logo: "/mc/assets/images/logo.png"
+# Logo (path is relative to baseurl; just-the-docs prepends baseurl itself)
+logo: "/assets/images/logo.png"
 
 # Search
 search_enabled: true

@@ -28,13 +28,48 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 
 ## Installation
 
-`@tangent.to/mc` ships a single browser-first build and uses
-[TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor math
-and automatic differentiation. `tfjs` is a **peer dependency** - it is *not* bundled
-into `mc`, so you load it once and share it (mixing two `tfjs` copies breaks tensor
-interop). See [Loading TensorFlow.js](#loading-tensorflowjs) below.
+`@tangent.to/mc` ships a single browser-first build, so the fastest way to run it is a
+direct ESM import from a CDN - no install and no build step. It is also on npm and JSR
+for bundler and Node projects.
 
-### Node.js / npm
+It uses [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor
+math and automatic differentiation. `tfjs` is a **peer dependency**: it is not bundled,
+so it is loaded once and shared (mixing two copies breaks tensor interop). On a CDN the
+`+esm` endpoint resolves it for you; with a bundler you install it alongside `mc`.
+
+### Browser / CDN (no build step)
+
+jsDelivr's `+esm` endpoint auto-resolves `tfjs`, so a single import works in a plain
+`<script type="module">` - nothing else to load:
+
+```html
+<script type="module">
+  import { Model, Normal, MetropolisHastings }
+    from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
+  // ... build and sample your model
+</script>
+```
+
+### Observable
+
+The same single import works in an Observable cell:
+
+```javascript
+mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
+```
+
+### Deno
+
+```typescript
+import { Model, Normal, MetropolisHastings } from "jsr:@tangent/mc";
+// or, from npm:
+import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
+```
+
+### Node.js / npm / bundlers
+
+For a bundler (Vite, webpack, esbuild, …) or a Node project, install `mc` with the
+`tfjs` peer dependency alongside it:
 
 ```bash
 npm install @tangent.to/mc @tensorflow/tfjs
@@ -44,50 +79,11 @@ npm install @tangent.to/mc @tensorflow/tfjs
 import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
 ```
 
-### Deno
-
-```typescript
-import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
-```
-
-### Loading TensorFlow.js
-
-How you provide `tfjs` depends on whether you use a build step:
-
-**With a bundler** (Vite, webpack, esbuild, …) - install both packages and import as
-usual; the bundler resolves `@tensorflow/tfjs` for you. Nothing else to do.
-
-**Without a build step** (plain `<script type="module">`, CDN) - bare imports don't
-resolve in the browser, so add an [import map](https://developer.mozilla.org/docs/Web/HTML/Element/script/type/importmap)
-*before* importing `mc`:
-
-```html
-<script type="importmap">
-{
-  "imports": {
-    "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/+esm"
-  }
-}
-</script>
-<script type="module">
-  import { Model, Normal, MetropolisHastings } from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
-  // ... build and sample your model
-</script>
-```
-
-`mc` also re-exports the shared instance, so you can grab `tf` from `mc` itself
-instead of importing it separately:
+The bundler resolves the peer dependency for you. `mc` also re-exports the shared `tf`
+instance, so you can grab it from `mc` itself instead of importing it separately:
 
 ```javascript
 import { tf } from '@tangent.to/mc';
-```
-
-### Observable
-
-jsDelivr's `+esm` endpoint auto-resolves the `tfjs` dependency, so a single import works:
-
-```javascript
-mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 ## Quick Start
