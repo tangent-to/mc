@@ -10,10 +10,10 @@
 //        import { distributions, samplers, diagnostics } from '@tangent.to/mc';
 //        import mc from '@tangent.to/mc';  // mc.distributions.Normal, ...
 
-// Re-export the bundled TensorFlow.js so consumers build tensors with the SAME
-// tf instance the library uses (mixing two tf copies breaks tensor interop).
-import * as tf from '@tensorflow/tfjs';
-export { tf };
+// Since 0.5.0 mc runs on plain numbers/arrays via @tangent.to/proba —
+// no TensorFlow.js. Use setRandomSeed(seed) for reproducible runs.
+import { getRng, setRandomSeed } from './rng.js';
+export { getRng, setRandomSeed };
 
 import { Model } from './model.js';
 
@@ -133,8 +133,9 @@ export const plot = {
 
 // Default export: the whole library grouped by namespace
 export default {
-  tf,
   Model,
+  setRandomSeed,
+  getRng,
   distributions,
   samplers,
   diagnostics,

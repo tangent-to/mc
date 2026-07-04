@@ -1,5 +1,5 @@
-import jstat from 'jstat';
 import { isOptions } from '../distributions/base.js';
+import { getRng } from '../rng.js';
 import { initTrace, recordSample } from './_shared.js';
 
 /**
@@ -81,7 +81,8 @@ export class MetropolisHastings {
 
     // Current state
     let currentParams = { ...initialValues };
-    let currentLogProb = model.logProb(currentParams).arraySync();
+    let currentLogProb = model.logProb(currentParams);
+    const rng = getRng();
 
     const totalIterations = burnIn + (nSamples * thin);
 
@@ -90,23 +91,23 @@ export class MetropolisHastings {
     console.log(`Total iterations: ${totalIterations}`);
 
     for (let i = 0; i < totalIterations; i++) {
-      // Propose new parameters
+      // Propose new parameters (Gaussian random walk, elementwise for arrays)
       const proposedParams = {};
       for (const name of variableNames) {
         const current = currentParams[name];
-        const currentValue = typeof current === 'number' ? current : current.arraySync();
-        const proposal = currentValue + jstat.normal.sample(0, this.proposalStd);
-        proposedParams[name] = proposal;
+        proposedParams[name] = Array.isArray(current)
+          ? current.map((c) => c + this.proposalStd * rng.normal())
+          : current + this.proposalStd * rng.normal();
       }
 
       // Compute acceptance probability
-      const proposedLogProb = model.logProb(proposedParams).arraySync();
+      const proposedLogProb = model.logProb(proposedParams);
       const logAcceptanceRatio = proposedLogProb - currentLogProb;
       const acceptanceRatio = Math.exp(logAcceptanceRatio);
 
       // Accept or reject
       accepted.total++;
-      if (Math.random() < acceptanceRatio) {
+      if (rng.float() < acceptanceRatio) {
         currentParams = proposedParams;
         currentLogProb = proposedLogProb;
         accepted.count++;

@@ -1,6 +1,6 @@
-import * as tf from '@tensorflow/tfjs';
 import { isOptions } from '../distributions/base.js';
-import { computeHamiltonian, initTrace, recordSample } from './_shared.js';
+import { getRng } from '../rng.js';
+import { axpy, computeHamiltonian, dotValue, initTrace, recordSample, sampleMomentum } from './_shared.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -80,46 +80,27 @@ export class NUTS {
   leapfrog(position, momentum, stepSize, model) {
     const variableNames = Object.keys(position);
 
-    return tf.tidy(() => {
-      // Convert to tensors
-      const q = {};
-      const p = {};
+    // Half step for momentum
+    const grad1 = model.logProbAndGradient(position).gradients;
+    const pHalf = {};
+    for (const name of variableNames) {
+      pHalf[name] = axpy(momentum[name], stepSize / 2, grad1[name]);
+    }
 
-      for (const name of variableNames) {
-        q[name] = typeof position[name] === 'number' ? tf.scalar(position[name]) : position[name];
-        p[name] = typeof momentum[name] === 'number' ? tf.scalar(momentum[name]) : momentum[name];
-      }
+    // Full step for position
+    const qNew = {};
+    for (const name of variableNames) {
+      qNew[name] = axpy(position[name], stepSize, pHalf[name]);
+    }
 
-      // Half step for momentum
-      const grad1 = model.logProbAndGradient(q);
-      const pHalf = {};
-      for (const name of variableNames) {
-        pHalf[name] = tf.add(p[name], tf.mul(stepSize / 2, grad1.gradients[name]));
-      }
+    // Half step for momentum
+    const grad2 = model.logProbAndGradient(qNew).gradients;
+    const pNew = {};
+    for (const name of variableNames) {
+      pNew[name] = axpy(pHalf[name], stepSize / 2, grad2[name]);
+    }
 
-      // Full step for position
-      const qNew = {};
-      for (const name of variableNames) {
-        qNew[name] = tf.add(q[name], tf.mul(stepSize, pHalf[name]));
-      }
-
-      // Half step for momentum
-      const grad2 = model.logProbAndGradient(qNew);
-      const pNew = {};
-      for (const name of variableNames) {
-        pNew[name] = tf.add(pHalf[name], tf.mul(stepSize / 2, grad2.gradients[name]));
-      }
-
-      // Convert back to numbers
-      const positionNew = {};
-      const momentumNew = {};
-      for (const name of variableNames) {
-        positionNew[name] = qNew[name].arraySync();
-        momentumNew[name] = pNew[name].arraySync();
-      }
-
-      return { position: positionNew, momentum: momentumNew };
-    });
+    return { position: qNew, momentum: pNew };
   }
 
   /**
@@ -144,18 +125,13 @@ export class NUTS {
   isUTurn(positionMinus, positionPlus, momentumMinus, momentumPlus) {
     const variableNames = Object.keys(positionMinus);
 
-    // Compute (theta_plus - theta_minus) . p_plus
+    // Compute (theta_plus - theta_minus) . p_plus and . p_minus
     let dotPlus = 0;
-    for (const name of variableNames) {
-      const deltaTheta = positionPlus[name] - positionMinus[name];
-      dotPlus += deltaTheta * momentumPlus[name];
-    }
-
-    // Compute (theta_plus - theta_minus) . p_minus
     let dotMinus = 0;
     for (const name of variableNames) {
-      const deltaTheta = positionPlus[name] - positionMinus[name];
-      dotMinus += deltaTheta * momentumMinus[name];
+      const deltaTheta = axpy(positionPlus[name], -1, positionMinus[name]);
+      dotPlus += dotValue(deltaTheta, momentumPlus[name]);
+      dotMinus += dotValue(deltaTheta, momentumMinus[name]);
     }
 
     // U-turn if either dot product is negative
@@ -234,7 +210,7 @@ export class NUTS {
     // Sample from combined tree (with probability proportional to valid nodes)
     let positionPrime = tree1.positionPrime;
     const acceptProb = tree2.nValid / Math.max(tree1.nValid + tree2.nValid, 1);
-    if (Math.random() < acceptProb) {
+    if (getRng().float() < acceptProb) {
       positionPrime = tree2.positionPrime;
     }
 
@@ -301,18 +277,20 @@ export class NUTS {
     let logStepSizeBar = 0;
     let hBar = 0;
 
+    const rng = getRng();
+
     for (let i = 0; i < totalIterations; i++) {
-      // Sample momentum
-      const momentum = {};
-      for (const name of variableNames) {
-        momentum[name] = tf.randomNormal([]).arraySync();
-      }
+      // Sample momentum (matched to each variable's shape)
+      const momentum = sampleMomentum(
+        Object.fromEntries(variableNames.map((n) => [n, currentParams[n]])),
+        rng,
+      );
 
       // Compute current Hamiltonian
       const H0 = this.hamiltonian(currentParams, momentum, model);
 
       // Sample slice variable
-      const slice = Math.random() * Math.exp(-H0);
+      const slice = rng.float() * Math.exp(-H0);
 
       // Initialize tree
       let positionMinus = { ...currentParams };
@@ -330,7 +308,7 @@ export class NUTS {
       // Build tree by doubling
       while (!stop && depth < this.maxTreeDepth) {
         // Choose direction randomly
-        const direction = Math.random() < 0.5 ? -1 : 1;
+        const direction = getRng().float() < 0.5 ? -1 : 1;
 
         // Build subtree
         let tree;
@@ -353,7 +331,7 @@ export class NUTS {
         // Sample from tree
         if (!tree.stop) {
           const acceptProb = tree.nValid / nValid;
-          if (Math.random() < acceptProb) {
+          if (getRng().float() < acceptProb) {
             proposedParams = tree.positionPrime;
           }
         }

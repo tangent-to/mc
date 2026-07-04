@@ -1,4 +1,3 @@
-import * as tf from '@tensorflow/tfjs';
 import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
 
 /**
@@ -91,27 +90,20 @@ export class HMC {
 
     // log p(q) and ∇ log p(q) as flat arrays, evaluated through the model.
     const logpGrad = (q) => {
-      let logp = 0;
+      const dict = unflatten(q);
+      const res = model.logProbAndGradient(dict);
       const grad = new Float64Array(dim);
-      tf.tidy(() => {
-        const dict = {};
-        let off = 0;
-        for (const sp of specs) {
-          dict[sp.name] = sp.isVec
-            ? tf.tensor1d(Array.from(q.slice(off, off + sp.size)))
-            : tf.scalar(q[off]);
-          off += sp.size;
-        }
-        const res = model.logProbAndGradient(dict);
-        logp = res.logProb;
-        off = 0;
-        for (const sp of specs) {
-          const g = res.gradients[sp.name].dataSync();
+      let off = 0;
+      for (const sp of specs) {
+        const g = res.gradients[sp.name];
+        if (sp.isVec) {
           for (let k = 0; k < sp.size; k++) grad[off + k] = g[k] ?? 0;
-          off += sp.size;
+        } else {
+          grad[off] = g ?? 0;
         }
-      });
-      return { logp, grad };
+        off += sp.size;
+      }
+      return { logp: res.logProb, grad };
     };
 
     const kinetic = (p) => { let s = 0; for (let k = 0; k < dim; k++) s += 0.5 * p[k] * p[k]; return s; };

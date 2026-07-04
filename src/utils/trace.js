@@ -5,7 +5,10 @@
 /**
  * Compute summary statistics for a trace
  * @param {Array<number>} samples - Array of samples
- * @returns {Object} Summary statistics
+ * @returns {{mean: number, median: number, std: number, variance: number,
+ *   hdi_2_5: number, hdi_97_5: number, n: number}} Summary statistics: the
+ *   mean, median, standard deviation, variance, 2.5%/97.5% interval bounds,
+ *   and the sample count
  */
 export function summarize(samples) {
   const n = samples.length;

@@ -1,5 +1,3 @@
-import * as tf from '@tensorflow/tfjs';
-
 /**
  * Model class for defining Bayesian probabilistic models
  *
@@ -17,8 +15,24 @@ import * as tf from '@tensorflow/tfjs';
  * p(\theta|y) = \frac{p(y|\theta)p(\theta)}{p(y)} \propto p(y|\theta)p(\theta)
  * $$
  *
+ * Since 0.5.0 the model runs on plain numbers/arrays (no tensors).
+ * Gradients of the joint log-probability are ANALYTIC for the prior terms
+ * (via @tangent.to/proba's dlogpdf) and central finite differences for
+ * {@link Model#potential} terms (arbitrary user functions).
+ *
  * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
+
+/** Sum a number or an array of numbers. */
+function sumOf(v) {
+  if (Array.isArray(v)) {
+    let s = 0;
+    for (let i = 0; i < v.length; i++) s += v[i];
+    return s;
+  }
+  return v;
+}
+
 export class Model {
   /**
    * Accepts either a positional name or a single options object `{ name }`.
@@ -39,26 +53,28 @@ export class Model {
     this.observedVars = new Map(); // Observed data
     this.potentials = new Map(); // Generic log-density terms (factors / likelihoods)
     this.deterministics = new Map(); // Named transforms recorded in the trace
-    this.logProbFn = null; // Compiled log probability function
   }
 
   /**
    * Register a generic log-density term (a "potential" / factor) contributing to
    * the joint log-probability. `fn(params)` receives the current free-variable
-   * values as tf tensors keyed by name and must return a tf.Tensor of
-   * log-density values (which are summed into the total).
+   * values as plain numbers (or arrays) keyed by name and must return a number
+   * or an array of log-density values (which are summed into the total).
    *
    * This is the general mechanism for likelihoods whose parameters are arbitrary
    * deterministic functions of the latent variables and data - the deterministic
-   * expression is computed inside `fn`, so it is not specific to any one model:
+   * expression is computed inside `fn` with ordinary JavaScript math:
    *
    * ```js
    * model.potential('y', (v) =>
-   *   new Normal(tf.add(tf.mul(v.slope, xData), v.intercept), v.sigma).logProb(yData));
+   *   new Normal(xData.map((x) => v.slope * x + v.intercept), v.sigma).logProb(yData));
    * ```
    *
+   * Gradients of potentials are computed by central finite differences; priors
+   * added with {@link Model#addVariable} get analytic gradients.
+   *
    * @param {string} name - Identifier for the term
-   * @param {(params: Object) => tf.Tensor} fn - Returns a log-density tensor
+   * @param {(params: Object) => (number|Array<number>)} fn - Returns log-density value(s)
    * @returns {Model} this
    */
   potential(name, fn) {
@@ -73,7 +89,7 @@ export class Model {
    * factor terms.
    *
    * @param {string} name - Identifier for the transform
-   * @param {(params: Object) => (tf.Tensor|number|Array)} fn - The transform
+   * @param {(params: Object) => (number|Array)} fn - The transform
    * @returns {Model} this
    */
   deterministic(name, fn) {
@@ -108,74 +124,102 @@ export class Model {
     return this.variables.get(name);
   }
 
-  /**
-   * Compute the log probability of the model given parameter values
-   * @param {Object} params - Parameter values as {name: value} pairs
-   * @returns {tf.Tensor} Log probability (scalar)
-   */
-  logProb(params) {
-    return tf.tidy(() => {
-      let logProb = tf.scalar(0);
-
-      // Compute log probability for each variable
-      for (const [name, distribution] of this.variables.entries()) {
-        const value = params[name];
-
-        if (value !== undefined) {
-          const varLogProb = distribution.logProb(value);
-          logProb = tf.add(logProb, tf.sum(varLogProb));
-        } else if (distribution.observed !== null) {
-          // For observed variables, compute log likelihood
-          const varLogProb = distribution.logProb(distribution.observed);
-          logProb = tf.add(logProb, tf.sum(varLogProb));
-        }
-      }
-
-      // Generic potential / likelihood terms (deterministic-mean factors).
-      for (const fn of this.potentials.values()) {
-        logProb = tf.add(logProb, tf.sum(fn(params)));
-      }
-
-      return logProb;
-    });
+  /** Sum of all potential terms at the given parameter values. */
+  _potentialSum(params) {
+    let s = 0;
+    for (const fn of this.potentials.values()) {
+      s += sumOf(fn(params));
+    }
+    return s;
   }
 
   /**
-   * Compute the log probability and its gradient with respect to parameters
-   * @param {Object} params - Parameter values as {name: tf.Tensor} pairs
+   * Compute the log probability of the model given parameter values
+   * @param {Object} params - Parameter values as {name: number|Array} pairs
+   * @returns {number} Log probability (scalar)
+   */
+  logProb(params) {
+    let logProb = 0;
+
+    // Log probability for each variable
+    for (const [name, distribution] of this.variables.entries()) {
+      const value = params[name];
+
+      if (value !== undefined) {
+        logProb += sumOf(distribution.logProb(value));
+      } else if (distribution.observed !== null) {
+        // For observed variables, compute log likelihood
+        logProb += sumOf(distribution.logProb(distribution.observed));
+      }
+    }
+
+    // Generic potential / likelihood terms (deterministic-mean factors).
+    if (this.potentials.size) {
+      logProb += this._potentialSum(params);
+    }
+
+    return logProb;
+  }
+
+  /**
+   * Compute the log probability and its gradient with respect to parameters.
+   *
+   * Prior terms are differentiated analytically (proba dlogpdf); potential
+   * terms by central finite differences with step h = 1e-6 * max(1, |x|)
+   * per scalar component.
+   *
+   * @param {Object} params - Parameter values as {name: number|Array} pairs
    * @returns {{logProb: number, gradients: Object}} The scalar log probability
-   *   and a `{name: tf.Tensor}` map of gradients, one per parameter
+   *   and a `{name: number|Array}` map of gradients, one per parameter
    */
   logProbAndGradient(params) {
-    const paramNames = Object.keys(params);
-
-    // Inputs as tensors (track the ones we create so we can free them).
-    const created = [];
-    const inputs = paramNames.map((name) => {
-      const v = params[name];
-      if (v instanceof tf.Tensor) return v;
-      const t = tf.tensor(v);
-      created.push(t);
-      return t;
-    });
-
-    // tf.valueAndGrads differentiates w.r.t. the positional inputs and returns
-    // gradients in the SAME order - robust regardless of variable naming.
-    const f = (...args) => {
-      const dict = {};
-      paramNames.forEach((name, i) => { dict[name] = args[i]; });
-      return this.logProb(dict);
-    };
-    const { value, grads } = tf.valueAndGrads(f)(inputs);
-
+    let logProb = 0;
     const gradients = {};
-    paramNames.forEach((name, i) => { gradients[name] = grads[i]; });
 
-    const logProbValue = value.arraySync();
-    value.dispose();
-    created.forEach((t) => t.dispose());
+    // Analytic prior gradients + observed-variable likelihood (constant in params)
+    for (const [name, distribution] of this.variables.entries()) {
+      const value = params[name];
 
-    return { logProb: logProbValue, gradients };
+      if (value !== undefined) {
+        logProb += sumOf(distribution.logProb(value));
+        gradients[name] = distribution.dlogProbDx(value);
+      } else if (distribution.observed !== null) {
+        logProb += sumOf(distribution.logProb(distribution.observed));
+      }
+    }
+
+    // Potentials: value plus finite-difference gradients per free component
+    if (this.potentials.size) {
+      logProb += this._potentialSum(params);
+
+      for (const name of Object.keys(params)) {
+        const v = params[name];
+
+        if (Array.isArray(v)) {
+          const g = Array.isArray(gradients[name])
+            ? gradients[name].slice()
+            : new Array(v.length).fill(gradients[name] ?? 0);
+          const work = { ...params, [name]: v.slice() };
+          for (let i = 0; i < v.length; i++) {
+            const h = 1e-6 * Math.max(1, Math.abs(v[i]));
+            work[name][i] = v[i] + h;
+            const fPlus = this._potentialSum(work);
+            work[name][i] = v[i] - h;
+            const fMinus = this._potentialSum(work);
+            work[name][i] = v[i];
+            g[i] += (fPlus - fMinus) / (2 * h);
+          }
+          gradients[name] = g;
+        } else {
+          const h = 1e-6 * Math.max(1, Math.abs(v));
+          const fPlus = this._potentialSum({ ...params, [name]: v + h });
+          const fMinus = this._potentialSum({ ...params, [name]: v - h });
+          gradients[name] = (gradients[name] ?? 0) + (fPlus - fMinus) / (2 * h);
+        }
+      }
+    }
+
+    return { logProb, gradients };
   }
 
   /**
@@ -188,9 +232,7 @@ export class Model {
 
     for (const [name, distribution] of this.variables.entries()) {
       if (distribution.observed === null) {
-        const sample = distribution.sample([nSamples]);
-        samples[name] = sample.arraySync();
-        sample.dispose();
+        samples[name] = distribution.sample([nSamples]);
       }
     }
 
@@ -216,8 +258,8 @@ export class Model {
    * draw and append them to the trace as extra columns. Computed post-hoc - they
    * do not affect sampling - and the MCMC samplers call this automatically before
    * returning their trace. Each `fn(params)` receives a `{name: number}` map of
-   * the free-variable values for one draw and may return a number, an array, or a
-   * tf.Tensor (tensors are read out and disposed).
+   * the free-variable values for one draw and may return a number or an array
+   * (legacy tensor-like returns with `arraySync` are read out too).
    *
    * @param {Object} trace - Trace map `{ name: [...] }` or a `{ trace }` wrapper.
    * @returns {Object} The same trace, with one column per deterministic.

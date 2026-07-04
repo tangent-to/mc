@@ -1,6 +1,7 @@
 /**
  * Internal helpers shared by the MCMC samplers (Metropolis-Hastings, HMC, NUTS).
- * Not part of the public API.
+ * Not part of the public API. Positions/momenta are plain numbers or arrays
+ * of numbers keyed by variable name.
  */
 
 /**
@@ -11,15 +12,63 @@
  * @returns {number} Hamiltonian value
  */
 export function computeHamiltonian(model, position, momentum) {
-  const logProb = model.logProb(position).arraySync();
+  const logProb = model.logProb(position);
 
   let kineticEnergy = 0;
-  for (const name of Object.keys(momentum)) {
-    const p = momentum[name];
-    kineticEnergy += 0.5 * p * p;
+  for (const p of Object.values(momentum)) {
+    if (Array.isArray(p)) {
+      for (let i = 0; i < p.length; i++) kineticEnergy += 0.5 * p[i] * p[i];
+    } else {
+      kineticEnergy += 0.5 * p * p;
+    }
   }
 
   return -logProb + kineticEnergy;
+}
+
+/**
+ * Elementwise a + s*b for scalars or arrays (shapes must match).
+ * @param {number|Array<number>} a
+ * @param {number} s
+ * @param {number|Array<number>} b
+ * @returns {number|Array<number>}
+ */
+export function axpy(a, s, b) {
+  if (Array.isArray(a)) {
+    const out = new Array(a.length);
+    for (let i = 0; i < a.length; i++) out[i] = a[i] + s * b[i];
+    return out;
+  }
+  return a + s * b;
+}
+
+/**
+ * Dot product of two scalar-or-array values.
+ * @param {number|Array<number>} a
+ * @param {number|Array<number>} b
+ * @returns {number}
+ */
+export function dotValue(a, b) {
+  if (Array.isArray(a)) {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+    return s;
+  }
+  return a * b;
+}
+
+/**
+ * Draw a standard-normal momentum with the same shape as the position.
+ * @param {Object} position - Position dict used as the shape template
+ * @param {Object} rng - RNG with .normal()
+ * @returns {Object} Momentum dict
+ */
+export function sampleMomentum(position, rng) {
+  const momentum = {};
+  for (const [name, v] of Object.entries(position)) {
+    momentum[name] = Array.isArray(v) ? v.map(() => rng.normal()) : rng.normal();
+  }
+  return momentum;
 }
 
 /**

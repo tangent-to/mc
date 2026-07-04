@@ -1,4 +1,3 @@
-import * as tf from '@tensorflow/tfjs';
 import { NUTS } from '../src/samplers/index.js';
 import { Model } from '../src/model.js';
 import { Normal } from '../src/distributions/index.js';
@@ -12,11 +11,6 @@ import { Normal } from '../src/distributions/index.js';
  * of the energy-weighting logic is caught.
  */
 describe('NUTS recovers a conjugate Gaussian posterior', () => {
-  beforeAll(async () => {
-    await tf.setBackend('cpu');
-    await tf.ready();
-  });
-
   test('posterior mean AND standard deviation match the analytic values', () => {
     // Deterministic pseudo-data x_i ~ N(5, 2) via an LCG (no RNG dependence).
     let s = 12345;
@@ -32,7 +26,7 @@ describe('NUTS recovers a conjugate Gaussian posterior', () => {
     const analyticMean = (data.reduce((a, b) => a + b, 0) / sigma2) / prec;
     const analyticSd = Math.sqrt(1 / prec);
 
-    const yT = tf.tensor1d(data);
+    const yT = data;
     const model = new Model('conjugate-normal');
     model.addVariable('mu', new Normal(0, 10));
     model.potential('lik', (p) => new Normal(p.mu, 2).logProb(yT));
