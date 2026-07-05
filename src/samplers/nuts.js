@@ -252,12 +252,15 @@ export class NUTS {
    * nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
    */
   sample(model, initialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
+    let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
       nWarmup = o.nWarmup ?? o.burnIn ?? 500;
       thin = o.thin ?? 1;
+      verbose = o.verbose ?? false;
       nSamples = o.nSamples ?? 1000;
     }
+    const log = verbose ? console.log : () => {};
     const variableNames = model.getFreeVariableNames();
     const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
@@ -267,10 +270,10 @@ export class NUTS {
 
     const totalIterations = nWarmup + (nSamples * thin);
 
-    console.log(`Starting NUTS sampling...`);
-    console.log(`Warmup: ${nWarmup}, Samples: ${nSamples}, Thin: ${thin}`);
-    console.log(`Total iterations: ${totalIterations}`);
-    console.log(`Max tree depth: ${this.maxTreeDepth} (up to ${Math.pow(2, this.maxTreeDepth)} leapfrog steps)`);
+    log(`Starting NUTS sampling...`);
+    log(`Warmup: ${nWarmup}, Samples: ${nSamples}, Thin: ${thin}`);
+    log(`Total iterations: ${totalIterations}`);
+    log(`Max tree depth: ${this.maxTreeDepth} (up to ${Math.pow(2, this.maxTreeDepth)} leapfrog steps)`);
 
     // Dual averaging state
     let logStepSize = Math.log(this.stepSize);
@@ -369,7 +372,7 @@ export class NUTS {
       } else if (i === nWarmup) {
         // End of warmup: set final step size
         this.stepSize = Math.exp(logStepSizeBar);
-        console.log(`Warmup complete. Final step size: ${this.stepSize.toFixed(6)}`);
+        log(`Warmup complete. Final step size: ${this.stepSize.toFixed(6)}`);
       }
 
       // Store samples after warmup and according to thinning
@@ -383,13 +386,13 @@ export class NUTS {
         const avgAcceptRate = (accepted.count / accepted.total * 100).toFixed(1);
         const stepSizeStr = this.stepSize.toFixed(6);
         const phase = i < nWarmup ? 'Warmup' : 'Sampling';
-        console.log(`Progress: ${progress}% | ${phase} | Step size: ${stepSizeStr} | Avg accept: ${avgAcceptRate}%`);
+        log(`Progress: ${progress}% | ${phase} | Step size: ${stepSizeStr} | Avg accept: ${avgAcceptRate}%`);
       }
     }
 
     const finalAcceptanceRate = (accepted.count / accepted.total * 100).toFixed(1);
-    console.log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
-    console.log(`Adapted step size: ${this.stepSize.toFixed(6)}`);
+    log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
+    log(`Adapted step size: ${this.stepSize.toFixed(6)}`);
 
     model.computeDeterministics(trace); // append post-hoc deterministic columns
 

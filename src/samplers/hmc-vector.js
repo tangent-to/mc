@@ -1,3 +1,4 @@
+import { getRng, setRandomSeed } from '../rng.js';
 import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
 
 /**
@@ -58,13 +59,12 @@ export class HMC {
     });
     const dim = specs.reduce((s, sp) => s + sp.size, 0);
 
-    const rng = makeRng(this.seed);
-    const randn = () => {
-      // Box–Muller
-      const u1 = Math.max(rng(), 1e-12);
-      const u2 = rng();
-      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    };
+    // Use the package RNG (proba xoshiro128**) so this sampler shares the
+    // single seeded stream with every other sampler; setRandomSeed makes a
+    // whole run reproducible. An explicit `seed` on this sampler reseeds it.
+    if (this.seed !== undefined) setRandomSeed(this.seed);
+    const rng = getRng();
+    const randn = () => rng.normal();
 
     // Flatten / unflatten helpers.
     const flatten = (dict) => {
@@ -133,7 +133,7 @@ export class HMC {
       const dH = H0 - H1;
       const accept = Number.isFinite(dH) ? Math.min(1, Math.exp(dH)) : 0;
       const diverged = !Number.isFinite(dH) || Math.abs(dH) > 1000;
-      if (rng() < accept) return { q, accept, diverged };
+      if (rng.float() < accept) return { q, accept, diverged };
       return { q: q0, accept, diverged };
     };
 
@@ -257,16 +257,4 @@ function hdiInterval(samples, mass) {
     if (width < best) { best = width; lo = s[i]; hi = s[i + w - 1]; }
   }
   return [lo, hi];
-}
-
-/** Small deterministic PRNG (mulberry32); falls back to Math.random if no seed. */
-function makeRng(seed) {
-  if (seed === undefined) return Math.random;
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }

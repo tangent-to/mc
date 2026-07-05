@@ -131,12 +131,15 @@ export class HamiltonianMC {
    * hmc.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
    */
   sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
+    let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
       burnIn = o.burnIn ?? 500;
       thin = o.thin ?? 1;
+      verbose = o.verbose ?? false;
       nSamples = o.nSamples ?? 1000;
     }
+    const log = verbose ? console.log : () => {};
     const variableNames = model.getFreeVariableNames();
     const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
@@ -146,10 +149,10 @@ export class HamiltonianMC {
 
     const totalIterations = burnIn + (nSamples * thin);
 
-    console.log(`Starting Hamiltonian Monte Carlo sampling...`);
-    console.log(`Step size: ${this.stepSize}, Steps: ${this.nSteps}`);
-    console.log(`Burn-in: ${burnIn}, Samples: ${nSamples}, Thin: ${thin}`);
-    console.log(`Total iterations: ${totalIterations}`);
+    log(`Starting Hamiltonian Monte Carlo sampling...`);
+    log(`Step size: ${this.stepSize}, Steps: ${this.nSteps}`);
+    log(`Burn-in: ${burnIn}, Samples: ${nSamples}, Thin: ${thin}`);
+    log(`Total iterations: ${totalIterations}`);
 
     const rng = getRng();
 
@@ -192,12 +195,12 @@ export class HamiltonianMC {
       if ((i + 1) % Math.max(1, Math.floor(totalIterations / 10)) === 0) {
         const progress = ((i + 1) / totalIterations * 100).toFixed(0);
         const acceptanceRate = (accepted.count / accepted.total * 100).toFixed(1);
-        console.log(`Progress: ${progress}% | Acceptance rate: ${acceptanceRate}%`);
+        log(`Progress: ${progress}% | Acceptance rate: ${acceptanceRate}%`);
       }
     }
 
     const finalAcceptanceRate = (accepted.count / accepted.total * 100).toFixed(1);
-    console.log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
+    log(`Sampling complete! Final acceptance rate: ${finalAcceptanceRate}%`);
 
     model.computeDeterministics(trace); // append post-hoc deterministic columns
 

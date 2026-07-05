@@ -215,3 +215,20 @@ describe('Bernoulli Distribution', () => {
     expect(variance).toBeCloseTo(0.21, 5);
   });
 });
+
+describe('API coherence fixes', () => {
+  test('logpdf is an alias for logProb (matches proba contract)', () => {
+    const d = new Normal(0, 1);
+    expect(d.logpdf(0)).toBe(d.logProb(0));
+    expect(d.logpdf(1.3)).toBeCloseTo(-1.7639385, 5);
+  });
+
+  test('Gamma rejects a scale key (rate/scale footgun)', () => {
+    // shape/rate is the mc convention; a scale key is the R/ds convention
+    // and must throw rather than be silently misread as a rate.
+    expect(() => new Gamma({ shape: 2, scale: 3 })).toThrow(/scale/);
+    // rate/beta/alpha still work
+    expect(() => new Gamma({ alpha: 2, beta: 3 })).not.toThrow();
+    expect(() => new Gamma({ shape: 2, rate: 3 })).not.toThrow();
+  });
+});

@@ -97,6 +97,18 @@ export class Distribution {
   }
 
   /**
+   * Alias for {@link Distribution#logProb}, matching the `@tangent.to/proba`
+   * distribution contract (which names the method `logpdf`). Lets code written
+   * against proba's distributions work unchanged on mc's.
+   *
+   * @param {number|Array|Object} value - Value(s) to evaluate
+   * @returns {number|Array<number>}
+   */
+  logpdf(value) {
+    return this.logProb(value);
+  }
+
+  /**
    * Derivative of logProb with respect to the value, elementwise.
    * Used by Model.logProbAndGradient for analytic prior gradients.
    * Discrete distributions return 0 (no dx in their gradient contract).
