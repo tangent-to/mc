@@ -128,7 +128,8 @@ export function saveTraceCSV(trace, filepath) {
 
 /**
  * Export trace for browser environments (no fs dependency)
- * Returns a downloadable blob URL
+ * Returns a JSON string suitable for download or serialization (e.g. wrap it
+ * in a Blob to create a download link).
  * @param {Object} trace - Trace object
  * @returns {string} JSON string for download
  */

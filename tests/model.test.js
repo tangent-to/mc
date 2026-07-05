@@ -1,6 +1,5 @@
 import { Model } from '../src/model.js';
 import { Normal, Uniform } from '../src/distributions/index.js';
-import * as tf from '@tensorflow/tfjs';
 
 describe('Model', () => {
   test('constructor creates empty model', () => {
@@ -27,7 +26,7 @@ describe('Model', () => {
 
     expect(model.observedVars.size).toBe(1);
     expect(dist.observed).toBeDefined();
-    expect(dist.observed.shape).toEqual([3]);
+    expect(dist.observed.length).toBe(3);
   });
 
   test('getVariable retrieves variable', () => {
@@ -59,12 +58,11 @@ describe('Model', () => {
     model.addVariable('x', x);
 
     const logProb = model.logProb({ x: 0 });
-    const value = logProb.arraySync();
+    const value = logProb;
 
     // log(N(0|0,1)) ≈ -0.919
     expect(value).toBeCloseTo(-0.9189385, 4);
 
-    logProb.dispose();
   });
 
   test('logProb handles multiple variables', () => {
@@ -76,12 +74,11 @@ describe('Model', () => {
     model.addVariable('y', y);
 
     const logProb = model.logProb({ x: 0, y: 0 });
-    const value = logProb.arraySync();
+    const value = logProb;
 
     // log(N(0|0,1)) + log(N(0|0,1)) ≈ -1.8379
     expect(value).toBeCloseTo(-1.8378770, 4);
 
-    logProb.dispose();
   });
 
   test('logProbAndGradient computes gradients', () => {
@@ -89,7 +86,7 @@ describe('Model', () => {
     const x = new Normal(0, 1, 'x');
     model.addVariable('x', x);
 
-    const result = model.logProbAndGradient({ x: tf.scalar(1) });
+    const result = model.logProbAndGradient({ x: 1 });
 
     expect(result.logProb).toBeDefined();
     expect(result.gradients).toBeDefined();
@@ -99,10 +96,9 @@ describe('Model', () => {
     expect(gradKeys.length).toBeGreaterThan(0);
 
     // Gradient at x=1 should be approximately -1 (pulling toward mean 0)
-    const gradValue = result.gradients[gradKeys[0]].arraySync();
+    const gradValue = result.gradients[gradKeys[0]];
     expect(gradValue).toBeCloseTo(-1, 0); // Less strict tolerance
 
-    result.gradients[gradKeys[0]].dispose();
   });
 
   test('samplePrior generates samples', () => {
