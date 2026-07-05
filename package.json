@@ -26,8 +26,7 @@
     "watch": "esbuild src/index.js --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/index.js --sourcemap --keep-names --watch",
     "jsr:publish": "deno publish --allow-dirty",
     "jsr:publish:dry-run": "deno publish --dry-run --allow-dirty",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=tests/.*\\.test\\.js",
+    "test": "vitest",
     "test:pymc": "node tests/pymc-comparison.js",
     "test:all": "npm run test:unit && npm run test:pymc",
     "example": "node examples/linear_regression.js",
@@ -35,7 +34,9 @@
     "docs:api": "node scripts/build-api-docs.mjs",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
-    "prepublishOnly": "npm run test:all"
+    "prepublishOnly": "npm run test:all",
+    "test:run": "vitest run",
+    "deno:check": "deno check src/index.js"
   },
   "keywords": [
     "bayesian",
@@ -51,16 +52,16 @@
     "observable",
     "tangent.to"
   ],
-  "author": "tangent-to",
-  "license": "Apache-2.0",
+  "author": "Essi Parent",
+  "license": "GPL-3.0",
   "devDependencies": {
-    "esbuild": "^0.28.1",
-    "jest": "^29.7.0",
+    "esbuild": "^0.25.11",
     "typedoc": "^0.28.0",
-    "typedoc-plugin-markdown": "^4.4.0"
+    "typedoc-plugin-markdown": "^4.4.0",
+    "vitest": "^1.6.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "repository": {
     "type": "git",
