@@ -5,6 +5,9 @@
     ".": "./src/index.js",
     "./persistence": "./src/utils/persistence.js"
   },
+  "imports": {
+    "@tangent.to/proba": "../proba/src/index.js"
+  },
   "publish": {
     "exclude": [
       ".git",
@@ -23,8 +26,5 @@
       "LICENSE",
       "CHANGELOG.md"
     ]
-  },
-  "imports": {
-    "@tangent.to/proba": "../proba/src/index.js"
   }
 }
