@@ -6,7 +6,7 @@
     "./persistence": "./src/utils/persistence.js"
   },
   "imports": {
-    "@tangent.to/proba": "../proba/src/index.js"
+    "@tangent.to/proba": "jsr:@tangent/proba@^0.1.0"
   },
   "publish": {
     "exclude": [

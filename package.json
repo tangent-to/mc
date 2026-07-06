@@ -28,15 +28,16 @@
     "jsr:publish:dry-run": "deno publish --dry-run --allow-dirty",
     "test": "vitest",
     "test:pymc": "node tests/pymc-comparison.js",
-    "test:all": "npm run test:unit && npm run test:pymc",
+    "test:all": "npm run test:run && npm run test:pymc",
     "example": "node examples/linear_regression.js",
     "example:all": "node examples/linear_regression.js && node examples/logistic_regression.js && node examples/hierarchical_model.js",
     "docs:api": "node scripts/build-api-docs.mjs",
     "docs:generate": "node scripts/generate-docs.js",
     "docs:serve": "node scripts/serve-docs.js",
-    "prepublishOnly": "npm run test:all",
+    "prepublishOnly": "npm run test:run",
     "test:run": "vitest run",
-    "deno:check": "deno check src/index.js"
+    "deno:check": "deno check src/index.js",
+    "version": "node scripts/sync-version.mjs && git add deno.json"
   },
   "keywords": [
     "bayesian",
@@ -76,6 +77,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@tangent.to/proba": "file:../proba"
+    "@tangent.to/proba": "^0.1.0"
   }
 }
