@@ -5,8 +5,6 @@
 
 // %% [markdown]
 /*
-# Hierarchical models and partial pooling
-
 When data arrive in groups -- students in schools, patients in clinics, sensors
 on machines -- we rarely want to fit each group in isolation (small groups are
 noisy) or pool everything into one number (that ignores real differences).
@@ -23,7 +21,7 @@ TensorFlow, straight in the browser.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
+import { Model, distributions, samplers, setRandomSeed, diagnostics, plot } from 'https://esm.sh/@tangent.to/mc';
 
 const Normal = distributions.Normal;
 const NUTS = samplers.NUTS;
@@ -75,6 +73,33 @@ const rawMean = Array.from({ length: J }, (_, j) => {
   group_sizes: groupSizes,
   raw_group_means: rawMean.map((v) => Number(v.toFixed(2))),
 });
+
+// %% [markdown]
+/*
+The raw observations by group (blue), with each group's sample mean as a red
+tick. The small right-hand groups have few, scattered points, so their raw means
+are the least trustworthy -- exactly the ones the hierarchy will pull inward.
+*/
+
+// %% [javascript]
+
+const dataByGroup = Plot.plot({
+  height: 300,
+  grid: true,
+  marks: [
+    Plot.dot(
+      yData.map((y, i) => ({ group: groupIdx[i], y })),
+      { x: 'group', y: 'y', fill: '#4682b4', fillOpacity: 0.4, r: 3 },
+    ),
+    Plot.tickY(
+      rawMean.map((m, j) => ({ group: j, y: m })),
+      { x: 'group', y: 'y', stroke: 'red', strokeWidth: 2 },
+    ),
+  ],
+  x: { label: 'group', ticks: Array.from({ length: J }, (_, j) => j) },
+  y: { label: 'observed value' },
+});
+dataByGroup;
 
 // %% [markdown]
 /*
@@ -145,6 +170,18 @@ const fit = nuts.sample(model, init, { nSamples: 1000, nWarmup: 1000 });
 
 // %% [markdown]
 /*
+Trace plots for the three population parameters. Even through the awkward funnel
+geometry, each is a stationary band with no drift -- the non-centered
+parameterization keeps the chain mixing.
+*/
+
+// %% [javascript]
+
+const popTrace = plot.tracePlot(fit, ['mu', 'tau', 'sigma']).show(Plot);
+popTrace;
+
+// %% [markdown]
+/*
 ## Population parameters
 
 The three hyperparameters are recovered: the posterior mean of `mu` sits near the
@@ -178,6 +215,18 @@ const sigmaPost = summarize(fit.trace.sigma);
 
 // %% [markdown]
 /*
+A forest plot of the three population parameters: dot = posterior mean, bar = 95%
+credible interval. Each brackets its target -- grand mean 5, between-group spread
+2, within-group noise 1.5.
+*/
+
+// %% [javascript]
+
+const popForest = plot.forestPlot(fit, ['mu', 'tau', 'sigma'], 0.95).show(Plot);
+popForest;
+
+// %% [markdown]
+/*
 ## Shrinkage in action
 
 The point of the hierarchy is what it does to the group estimates. For each group
@@ -200,3 +249,40 @@ Array.from({ length: J }, (_, j) => {
     shrinkage_toward_grand_mean: Number((rawMean[j] - post.mean).toFixed(2)),
   };
 });
+
+// %% [markdown]
+/*
+Shrinkage made visual. For each group the grey dot is its raw sample mean and the
+blue dot its posterior mean; the connecting segment is the pull. The dashed red
+line is the grand mean. The big groups at the top barely move, while the small
+groups at the bottom are tugged toward the center -- partial pooling in one
+picture.
+*/
+
+// %% [javascript]
+
+const shrinkPlot = (() => {
+  const grand = summarize(fit.trace.mu).mean;
+  const rows = Array.from({ length: J }, (_, j) => {
+    const post = summarize(fit.trace[`theta_${j}`]);
+    return {
+      group: `G${j} (n=${groupSizes[j]})`,
+      raw: rawMean[j],
+      post: post.mean,
+    };
+  });
+  return Plot.plot({
+    height: 340,
+    marginLeft: 110,
+    grid: true,
+    marks: [
+      Plot.ruleX([grand], { stroke: 'red', strokeDasharray: '4 4' }),
+      Plot.ruleY(rows, { y: 'group', x1: 'raw', x2: 'post', stroke: '#bbb', strokeWidth: 2 }),
+      Plot.dot(rows, { y: 'group', x: 'raw', fill: '#999', r: 4 }),
+      Plot.dot(rows, { y: 'group', x: 'post', fill: '#4682b4', r: 5 }),
+    ],
+    x: { label: 'group mean  (grey = raw, blue = posterior, red dash = grand mean)' },
+    y: { label: null },
+  });
+})();
+shrinkPlot;
