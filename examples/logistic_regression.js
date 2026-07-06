@@ -5,8 +5,6 @@
 
 // %% [markdown]
 /*
-# Bayesian logistic regression
-
 Binary outcomes -- click or no click, pass or fail, healthy or not -- call for
 logistic regression. We model the probability of a positive label as a logistic
 function of a single predictor, `p(y = 1) = sigmoid(alpha + beta * x)`, and use
@@ -21,7 +19,7 @@ browser.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
+import { Model, distributions, samplers, setRandomSeed, diagnostics, plot } from 'https://esm.sh/@tangent.to/mc';
 
 const Normal = distributions.Normal;
 const Bernoulli = distributions.Bernoulli;
@@ -59,6 +57,29 @@ const yData = xData.map((xi) => new Bernoulli(sigmoid(trueAlpha + trueBeta * xi)
   positives: yData.filter((y) => y === 1).length,
   negatives: yData.filter((y) => y === 0).length,
 });
+
+// %% [markdown]
+/*
+The raw labels against the predictor: 0s cluster at low `x`, 1s at high `x`, with
+a mixed zone in between. The overlap is what makes the transition gradual -- and
+what the model has to estimate.
+*/
+
+// %% [javascript]
+
+const dataScatter = Plot.plot({
+  height: 220,
+  grid: true,
+  marks: [
+    Plot.dot(
+      xData.map((xi, i) => ({ x: xi, y: yData[i] })),
+      { x: 'x', y: 'y', fill: '#4682b4', fillOpacity: 0.35, r: 4 },
+    ),
+  ],
+  x: { label: 'x' },
+  y: { label: 'label', domain: [-0.2, 1.2], ticks: [0, 1] },
+});
+dataScatter;
 
 // %% [markdown]
 /*
@@ -120,6 +141,17 @@ const fit = nuts.sample(
 
 // %% [markdown]
 /*
+Trace plots for both coefficients -- stationary fuzzy bands with no drift, the
+sign of a converged chain.
+*/
+
+// %% [javascript]
+
+const paramTrace = plot.tracePlot(fit, ['alpha', 'beta']).show(Plot);
+paramTrace;
+
+// %% [markdown]
+/*
 ## Summarizing the posterior
 
 `summarize` reduces each column of draws to a mean, a standard deviation, and a
@@ -151,3 +183,44 @@ const betaPost = summarize(fit.trace.beta);
     true_value: trueBeta,
   },
 });
+
+// %% [markdown]
+/*
+The fitted classifier: binary labels (blue dots) with the posterior-mean success
+probability curve (red). The curve rises through 0.5 right where the classes
+change over, recovering the S-shaped logistic link behind the data.
+*/
+
+// %% [javascript]
+
+const probCurve = (() => {
+  const grid = Array.from({ length: 120 }, (_, i) => -3 + 6 * (i / 119));
+  const curve = grid.map((xv) => ({ x: xv, p: sigmoid(alphaPost.mean + betaPost.mean * xv) }));
+  return Plot.plot({
+    height: 300,
+    grid: true,
+    marks: [
+      Plot.dot(
+        xData.map((xi, i) => ({ x: xi, y: yData[i] })),
+        { x: 'x', y: 'y', fill: '#4682b4', fillOpacity: 0.3, r: 4 },
+      ),
+      Plot.line(curve, { x: 'x', y: 'p', stroke: 'red', strokeWidth: 2 }),
+    ],
+    x: { label: 'x' },
+    y: { label: 'P(y = 1)', domain: [-0.05, 1.05] },
+  });
+})();
+probCurve;
+
+// %% [markdown]
+/*
+A forest plot of the two coefficients: dot = posterior mean, bar = 95% credible
+interval. Both bracket the truth (intercept -1, slope 2). Note how wide these
+intervals are -- Bernoulli data carries less information per point than Gaussian
+data, and the plot shows that honesty directly.
+*/
+
+// %% [javascript]
+
+const paramForest = plot.forestPlot(fit, ['alpha', 'beta'], 0.95).show(Plot);
+paramForest;

@@ -5,8 +5,6 @@
 
 // %% [markdown]
 /*
-# Bayesian inference with MCMC
-
 `@tangent.to/mc` builds Bayesian models the way PyMC does: you declare priors
 and a likelihood as a directed acyclic graph of random variables, then draw
 from the posterior with Markov chain Monte Carlo. Since version 0.5 the whole
@@ -22,7 +20,7 @@ the posterior brackets the values we used to generate the data.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
+import { Model, distributions, samplers, setRandomSeed, diagnostics, plot } from 'https://esm.sh/@tangent.to/mc';
 
 const Normal = distributions.Normal;
 const NUTS = samplers.NUTS;
@@ -54,6 +52,26 @@ const dataMean = data.reduce((a, b) => a + b, 0) / data.length;
   first_three: data.slice(0, 3),
   sample_mean: dataMean,
 });
+
+// %% [markdown]
+/*
+The 40 observations, binned. The red line marks the true mean (5) the sampler
+has not yet seen -- the histogram should straddle it.
+*/
+
+// %% [javascript]
+
+const dataHist = Plot.plot({
+  height: 220,
+  marks: [
+    Plot.rectY(data, Plot.binX({ y: 'count' }, { x: (d) => d, fill: '#4682b4', fillOpacity: 0.7 })),
+    Plot.ruleX([trueMu], { stroke: 'red', strokeWidth: 2 }),
+    Plot.ruleY([0]),
+  ],
+  x: { label: 'observed value' },
+  y: { label: 'count' },
+});
+dataHist;
 
 // %% [markdown]
 /*
@@ -128,6 +146,39 @@ const muPost = summarize(fit.trace.mu);
 
 // %% [markdown]
 /*
+The posterior for `mu`: the black line is the posterior mean, the dashed red
+line the true value. The truth falls squarely under the mass of the draws.
+*/
+
+// %% [javascript]
+
+const muHist = Plot.plot({
+  height: 240,
+  marks: [
+    Plot.rectY(fit.trace.mu, Plot.binX({ y: 'count' }, { x: (d) => d, fill: '#4682b4', fillOpacity: 0.7 })),
+    Plot.ruleX([muPost.mean], { stroke: 'black', strokeWidth: 2 }),
+    Plot.ruleX([trueMu], { stroke: 'red', strokeWidth: 2, strokeDasharray: '4 4' }),
+    Plot.ruleY([0]),
+  ],
+  x: { label: 'mu (posterior draws)' },
+  y: { label: 'count' },
+});
+muHist;
+
+// %% [markdown]
+/*
+The trace for `mu` -- values against iteration. A healthy chain looks like a
+fuzzy horizontal band with no drift, which is what confirms the draws above are
+worth trusting.
+*/
+
+// %% [javascript]
+
+const muTrace = plot.tracePlot(fit, ['mu']).show(Plot);
+muTrace;
+
+// %% [markdown]
+/*
 ## Estimating the scale as well
 
 Real problems rarely know the standard deviation in advance. We now infer it
@@ -166,3 +217,15 @@ const sigmaPost = summarize(fit2.trace.sigma);
     true_value: trueSigma,
   },
 });
+
+// %% [markdown]
+/*
+Joint fit: the posterior histograms for `mu` and `sigma` side by side (red line =
+posterior mean, black bar = 95% credible interval). Both distributions sit right
+on their targets of 5 and 2.
+*/
+
+// %% [javascript]
+
+const jointPost = plot.posteriorPlot(fit2, ['mu', 'sigma']).show(Plot);
+jointPost;

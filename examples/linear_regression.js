@@ -5,8 +5,6 @@
 
 // %% [markdown]
 /*
-# Bayesian linear regression
-
 The workhorse of applied statistics, done the Bayesian way with
 `@tangent.to/mc`. We fit the straight line `y = alpha + beta * x` to noisy
 observations, but instead of a single least-squares point estimate we recover a
@@ -23,7 +21,7 @@ model samples directly in the browser.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
+import { Model, distributions, samplers, setRandomSeed, diagnostics, plot } from 'https://esm.sh/@tangent.to/mc';
 
 const Normal = distributions.Normal;
 const NUTS = samplers.NUTS;
@@ -60,6 +58,25 @@ const yData = xData.map((xi, i) => trueAlpha + trueBeta * xi + noise[i]);
   first_three_x: xData.slice(0, 3).map((v) => Number(v.toFixed(2))),
   first_three_y: yData.slice(0, 3).map((v) => Number(v.toFixed(2))),
 });
+
+// %% [markdown]
+/*
+The raw data: 40 noisy points scattered around the hidden line. The upward drift
+is clear, but the exact intercept, slope, and noise level are what we now infer.
+*/
+
+// %% [javascript]
+
+const dataScatter = Plot.plot({
+  height: 300,
+  grid: true,
+  marks: [
+    Plot.dot(xData.map((xi, i) => ({ x: xi, y: yData[i] })), { x: 'x', y: 'y', fill: '#4682b4' }),
+  ],
+  x: { label: 'x' },
+  y: { label: 'y' },
+});
+dataScatter;
 
 // %% [markdown]
 /*
@@ -129,6 +146,17 @@ const fit = nuts.sample(
 
 // %% [markdown]
 /*
+Trace plots for the intercept and slope. Each looks like a stationary fuzzy band
+with no trend -- the visual signature of a well-mixed, converged chain.
+*/
+
+// %% [javascript]
+
+const paramTrace = plot.tracePlot(fit, ['alpha', 'beta']).show(Plot);
+paramTrace;
+
+// %% [markdown]
+/*
 ## Summarizing the posterior
 
 `summarize` reduces a column of draws to its mean, standard deviation, and a
@@ -164,3 +192,49 @@ const sigmaPost = summarize(fit.trace.sigma);
     true_value: trueSigma,
   },
 });
+
+// %% [markdown]
+/*
+The payoff plot: the data (black dots), the posterior-mean fit line (red), and a
+faint blue band of individual posterior draws. The spread of the band is the
+model's honest uncertainty about the line -- narrow here because the data pin it
+down well.
+*/
+
+// %% [javascript]
+
+const fitLine = (() => {
+  const xs = [Math.min(...xData), Math.max(...xData)];
+  const meanLine = xs.map((xv) => ({ x: xv, y: alphaPost.mean + betaPost.mean * xv }));
+  const nDraws = fit.trace.alpha.length;
+  const stride = nDraws > 60 ? Math.floor(nDraws / 60) : 1;
+  const band = [];
+  for (let k = 0; k < nDraws; k += stride) {
+    band.push({ x: xs[0], y: fit.trace.alpha[k] + fit.trace.beta[k] * xs[0], draw: k });
+    band.push({ x: xs[1], y: fit.trace.alpha[k] + fit.trace.beta[k] * xs[1], draw: k });
+  }
+  return Plot.plot({
+    height: 320,
+    grid: true,
+    marks: [
+      Plot.line(band, { x: 'x', y: 'y', z: 'draw', stroke: '#4682b4', strokeOpacity: 0.12 }),
+      Plot.dot(xData.map((xi, i) => ({ x: xi, y: yData[i] })), { x: 'x', y: 'y', fill: 'black', r: 3 }),
+      Plot.line(meanLine, { x: 'x', y: 'y', stroke: 'red', strokeWidth: 2 }),
+    ],
+    x: { label: 'x' },
+    y: { label: 'y' },
+  });
+})();
+fitLine;
+
+// %% [markdown]
+/*
+A forest plot summarizes all three parameters at a glance: the dot is the
+posterior mean and the bar the 95% credible interval. Every interval covers the
+value used to generate the data -- intercept 2, slope 3, noise 0.7.
+*/
+
+// %% [javascript]
+
+const paramForest = plot.forestPlot(fit, ['alpha', 'beta', 'sigma'], 0.95).show(Plot);
+paramForest;

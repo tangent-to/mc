@@ -5,8 +5,6 @@
 
 // %% [markdown]
 /*
-# Posterior visualization and convergence diagnostics
-
 Drawing samples is only half the job; you have to check that the chain actually
 explored the posterior before you trust a number from it. `@tangent.to/mc` ships
 two complementary toolkits for that. The `diagnostics` namespace gives numerical
@@ -167,6 +165,29 @@ const forestSpec = plot.forestPlot(chainA, ['mu', 'sigma'], 0.95);
 
 // %% [markdown]
 /*
+The same posterior spec, rendered. Passing Observable Plot to `spec.show(Plot)`
+turns it into faceted histograms of `mu` and `sigma` -- red line at the posterior
+mean, black bar spanning the 95% credible interval.
+*/
+
+// %% [javascript]
+
+const posteriorFig = posteriorSpec.show(Plot);
+posteriorFig;
+
+// %% [markdown]
+/*
+The forest spec rendered: one point-and-interval row per parameter, the compact
+summary that scales to many parameters at once.
+*/
+
+// %% [javascript]
+
+const forestFig = forestSpec.show(Plot);
+forestFig;
+
+// %% [markdown]
+/*
 ## Trace and autocorrelation specifications
 
 The trace plot records each parameter's value against iteration -- a healthy
@@ -189,3 +210,26 @@ const muLags = autocorrSpec.data
   trace: { type: traceSpec.type, variables: traceSpec.variables, n_points: traceSpec.data.length },
   autocorrelation: { type: autocorrSpec.type, max_lag: autocorrSpec.maxLag, mu_first_lags: muLags },
 });
+
+// %% [markdown]
+/*
+The trace spec rendered: each parameter's value against iteration. Healthy chains
+look like fuzzy horizontal bands with no drift.
+*/
+
+// %% [javascript]
+
+const traceFig = traceSpec.show(Plot);
+traceFig;
+
+// %% [markdown]
+/*
+The autocorrelation spec rendered for `mu`: correlation of the chain with itself
+at increasing lags. A fast decay toward zero is what lets the effective sample
+size approach the raw draw count.
+*/
+
+// %% [javascript]
+
+const autocorrFig = autocorrSpec.show(Plot);
+autocorrFig;
