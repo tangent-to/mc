@@ -19,7 +19,13 @@ browser.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics, plot } from 'https://esm.sh/@tangent.to/mc';
+import * as __lib from 'https://esm.sh/@tangent.to/mc';
+const Model = __lib.Model;
+const distributions = __lib.distributions;
+const samplers = __lib.samplers;
+const setRandomSeed = __lib.setRandomSeed;
+const diagnostics = __lib.diagnostics;
+const plot = __lib.plot;
 
 const Normal = distributions.Normal;
 const Bernoulli = distributions.Bernoulli;
