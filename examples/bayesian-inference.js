@@ -15,11 +15,6 @@ autodiff graph. Gradients for the No-U-Turn Sampler come from the analytic
 `dlogpdf` functions in `@tangent.to/proba`, so a model samples in the browser
 with nothing to compile.
 
-This notebook imports the local build. Once the package is published you would
-import it from a CDN instead:
-
-    import { Model, distributions, samplers, setRandomSeed } from 'https://esm.sh/@tangent.to/mc';
-
 The running example is deliberately small: recover the mean (and later the
 scale) of a Normal population from a handful of observations, and check that
 the posterior brackets the values we used to generate the data.
@@ -27,11 +22,12 @@ the posterior brackets the values we used to generate the data.
 
 // %% [javascript]
 
-import { Model, distributions, samplers, setRandomSeed, diagnostics } from '../dist/index.js';
+import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
 
-const { Normal } = distributions;
-const { NUTS } = samplers;
-const { summarize, effectiveSampleSize } = diagnostics;
+const Normal = distributions.Normal;
+const NUTS = samplers.NUTS;
+const summarize = diagnostics.summarize;
+const effectiveSampleSize = diagnostics.effectiveSampleSize;
 
 // %% [markdown]
 /*
