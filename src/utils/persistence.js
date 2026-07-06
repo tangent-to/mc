@@ -1,3 +1,15 @@
+/**
+ * Node-only file persistence for MCMC traces and model configuration.
+ *
+ * Reached via the `@tangent.to/mc/persistence` subpath export, this module
+ * uses `node:fs` to save and load traces (JSON/CSV) and model structure to
+ * disk, plus browser-safe string helpers ({@link exportTraceForBrowser},
+ * {@link importTraceFromJSON}) that avoid the filesystem. It is intentionally
+ * kept out of the main entry so the browser build stays `fs`-free.
+ *
+ * @module
+ */
+
 import fs from 'node:fs';
 
 /**

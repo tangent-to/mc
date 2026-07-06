@@ -7,6 +7,7 @@ import { Distribution, isOptions } from './base.js';
  */
 export class Lognormal extends Distribution {
   /**
+   * Create a log-normal distribution (parameters on the log scale).
    * @param {number|Array|Object} mu - Log-scale location, or an options object
    *   `{ mu | mean, sigma | sd | std, name }`
    * @param {number|Array} [sigma] - Log-scale standard deviation
@@ -25,6 +26,10 @@ export class Lognormal extends Distribution {
     this._dist = lognormal;
   }
 
+  /**
+   * The proba parameter object for this distribution.
+   * @returns {{mu: number|Array, sigma: number|Array}}
+   */
   _params() {
     return { mu: this.mu, sigma: this.sigma };
   }

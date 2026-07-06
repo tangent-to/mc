@@ -36,6 +36,10 @@ export class Normal extends Distribution {
     this._dist = normal;
   }
 
+  /**
+   * The proba parameter object for this distribution.
+   * @returns {{mu: number|Array, sigma: number|Array}}
+   */
   _params() {
     return { mu: this.mu, sigma: this.sigma };
   }

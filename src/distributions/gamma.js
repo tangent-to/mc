@@ -36,6 +36,10 @@ export class Gamma extends Distribution {
     this._dist = gamma;
   }
 
+  /**
+   * The proba parameter object for this distribution (shape/rate).
+   * @returns {{alpha: number|Array, beta: number|Array}}
+   */
   _params() {
     return { alpha: this.alpha, beta: this.beta };
   }

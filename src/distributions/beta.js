@@ -6,6 +6,7 @@ import { Distribution, isOptions } from './base.js';
  */
 export class Beta extends Distribution {
   /**
+   * Create a Beta distribution.
    * @param {number|Array|Object} alpha - First shape, or an options object
    *   `{ alpha, beta, name }`
    * @param {number|Array} [beta] - Second shape
@@ -24,6 +25,10 @@ export class Beta extends Distribution {
     this._dist = probaBeta;
   }
 
+  /**
+   * The proba parameter object for this distribution.
+   * @returns {{alpha: number|Array, beta: number|Array}}
+   */
   _params() {
     return { alpha: this.alpha, beta: this.beta };
   }

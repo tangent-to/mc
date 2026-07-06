@@ -33,6 +33,12 @@ function sumOf(v) {
   return v;
 }
 
+/**
+ * Bayesian probabilistic model: a DAG of random variables (priors), observed
+ * likelihoods, generic {@link Model#potential} log-density terms, and named
+ * {@link Model#deterministic} transforms, exposing the joint log-probability
+ * and its gradient for the MCMC samplers.
+ */
 export class Model {
   /**
    * Accepts either a positional name or a single options object `{ name }`.
