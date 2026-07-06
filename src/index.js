@@ -1,14 +1,20 @@
-// Main entry point for @tangent.to/mc
-//
-// Two complementary import styles are supported, matching the convention used
-// by the sibling @tangent.to/ds package:
-//
-//   1. Flat named imports:
-//        import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
-//
-//   2. Namespaced imports (and a default export bundling every namespace):
-//        import { distributions, samplers, diagnostics } from '@tangent.to/mc';
-//        import mc from '@tangent.to/mc';  // mc.distributions.Normal, ...
+/**
+ * Main entry point for `@tangent.to/mc` — a browser-first Bayesian inference
+ * library (PyMC-style models, MCMC samplers, and trace diagnostics) running on
+ * plain numbers/arrays via `@tangent.to/proba`.
+ *
+ * Two complementary import styles are supported, matching the convention used
+ * by the sibling `@tangent.to/ds` package:
+ *
+ *   1. Flat named imports:
+ *        import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
+ *
+ *   2. Namespaced imports (and a default export bundling every namespace):
+ *        import { distributions, samplers, diagnostics } from '@tangent.to/mc';
+ *        import mc from '@tangent.to/mc';  // mc.distributions.Normal, ...
+ *
+ * @module
+ */
 
 // Since 0.5.0 mc runs on plain numbers/arrays via @tangent.to/proba —
 // no TensorFlow.js. Use setRandomSeed(seed) for reproducible runs.
@@ -94,6 +100,10 @@ export {
 // ---------------------------------------------------------------------------
 // Namespaced exports (mirrors the @tangent.to/ds module convention)
 // ---------------------------------------------------------------------------
+/**
+ * Namespace bundling every probability distribution class.
+ * @type {Object}
+ */
 export const distributions = {
   Distribution,
   Normal,
@@ -105,6 +115,10 @@ export const distributions = {
   HalfNormal
 };
 
+/**
+ * Namespace bundling every MCMC sampler and the `summary` helper.
+ * @type {Object}
+ */
 export const samplers = {
   MetropolisHastings,
   HamiltonianMC,
@@ -113,6 +127,10 @@ export const samplers = {
   summary
 };
 
+/**
+ * Namespace bundling the trace summary, convergence, and export helpers.
+ * @type {Object}
+ */
 export const diagnostics = {
   summarize,
   effectiveSampleSize,
@@ -122,6 +140,10 @@ export const diagnostics = {
   traceToCSV
 };
 
+/**
+ * Namespace bundling the ASCII/text trace-visualization helpers.
+ * @type {Object}
+ */
 export const plot = {
   tracePlot,
   posteriorPlot,
@@ -131,7 +153,12 @@ export const plot = {
   rankPlot
 };
 
-// Default export: the whole library grouped by namespace
+/**
+ * Default export: the whole library grouped by namespace
+ * ({@link Model}, `setRandomSeed`, `getRng`, and the `distributions`,
+ * `samplers`, `diagnostics`, and `plot` namespaces).
+ * @type {Object}
+ */
 export default {
   Model,
   setRandomSeed,

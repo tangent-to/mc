@@ -6,6 +6,7 @@ import { Distribution, isOptions } from './base.js';
  */
 export class Uniform extends Distribution {
   /**
+   * Create a continuous uniform distribution on [lower, upper].
    * @param {number|Array|Object} lower - Lower bound, or an options object
    *   `{ lower | min, upper | max, name }`
    * @param {number|Array} [upper] - Upper bound
@@ -24,6 +25,10 @@ export class Uniform extends Distribution {
     this._dist = uniform;
   }
 
+  /**
+   * The proba parameter object for this distribution (proba `{low, high}` keys).
+   * @returns {{low: number|Array, high: number|Array}}
+   */
   _params() {
     return { low: this.lower, high: this.upper };
   }

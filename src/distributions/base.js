@@ -39,6 +39,7 @@ function toPlain(v) {
  */
 export class Distribution {
   /**
+   * Create a base distribution; subclasses set `this._dist` and parameters.
    * @param {string} [name='Distribution'] - Name of the distribution
    */
   constructor(name = 'Distribution') {
@@ -46,12 +47,19 @@ export class Distribution {
     this.observed = null;
   }
 
-  /** @returns {Object} proba parameter object; subclasses must implement */
+  /**
+   * The proba parameter object for this distribution; subclasses must implement.
+   * @returns {Object} proba parameter object (fields may be numbers or arrays)
+   */
   _params() {
     throw new Error('_params must be implemented by subclass');
   }
 
-  /** Broadcast length across value and parameters (0 = all scalar). */
+  /**
+   * Broadcast length across value and parameters (0 = all scalar).
+   * @param {number|Array} value - Value(s) whose length participates in broadcasting
+   * @returns {number} The broadcast length (0 when every input is scalar)
+   */
   _len(value) {
     let n = Array.isArray(value) ? value.length : 0;
     for (const v of Object.values(this._params())) {
@@ -60,6 +68,11 @@ export class Distribution {
     return n;
   }
 
+  /**
+   * The proba parameter object with each array parameter indexed at `i`.
+   * @param {number} i - Broadcast index
+   * @returns {Object} Per-element parameter object (scalars passed through)
+   */
   _paramsAt(i) {
     const out = {};
     for (const [k, v] of Object.entries(this._params())) {

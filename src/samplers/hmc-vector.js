@@ -21,6 +21,7 @@ import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
  */
 export class HMC {
   /**
+   * Create a vector-aware HMC sampler.
    * @param {Object} [opts]
    * @param {number} [opts.stepSize=0.05] - Initial leapfrog step size (adapted in warm-up).
    * @param {number} [opts.nSteps=20] - Leapfrog steps per proposal.

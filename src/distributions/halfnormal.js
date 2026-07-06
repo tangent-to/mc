@@ -7,6 +7,7 @@ import { Distribution, isOptions } from './base.js';
  */
 export class HalfNormal extends Distribution {
   /**
+   * Create a half-normal distribution.
    * @param {number|Array|Object} sigma - Scale, or an options object
    *   `{ sigma | sd | std | scale, name }`
    * @param {string} [name] - Name of the distribution
@@ -22,6 +23,10 @@ export class HalfNormal extends Distribution {
     this._dist = halfnormal;
   }
 
+  /**
+   * The proba parameter object for this distribution.
+   * @returns {{sigma: number|Array}}
+   */
   _params() {
     return { sigma: this.sigma };
   }
