@@ -1,105 +1,166 @@
-/**
- * Linear Regression Example
- *
- * This example demonstrates how to use mc for Bayesian linear regression.
- * The model structure is: y = α + β*x + ε, where ε ~ N(0, σ)
- */
+// ---
+// title: Bayesian linear regression
+// id: mc-linear-regression
+// ---
 
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '../src/index.js';
-import * as tf from '@tensorflow/tfjs-node';
+// %% [markdown]
+/*
+# Bayesian linear regression
 
-async function main() {
-  console.log('=== Bayesian Linear Regression with mc ===\n');
+The workhorse of applied statistics, done the Bayesian way with
+`@tangent.to/mc`. We fit the straight line `y = alpha + beta * x` to noisy
+observations, but instead of a single least-squares point estimate we recover a
+full posterior distribution over the intercept, the slope, and the noise scale.
+Every quantity comes with a credible interval that honestly reflects how much
+the data pin it down.
 
-  // Generate synthetic data
-  const trueAlpha = 2.0;
-  const trueBeta = 3.0;
-  const trueSigma = 0.5;
-  const n = 50;
+Like the rest of mc since version 0.5, this runs on plain numbers and arrays.
+There is no TensorFlow and nothing to compile: gradients for the No-U-Turn
+Sampler come from the analytic `dlogpdf` functions in `@tangent.to/proba` for
+the priors, and from finite differences for the likelihood potential, so the
+model samples directly in the browser.
+*/
 
-  const x = [];
-  const y = [];
+// %% [javascript]
 
-  console.log('Generating synthetic data...');
-  console.log(`True parameters: α=${trueAlpha}, β=${trueBeta}, σ=${trueSigma}\n`);
+import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
 
-  for (let i = 0; i < n; i++) {
-    const xi = Math.random() * 10;
-    const yi = trueAlpha + trueBeta * xi + (Math.random() - 0.5) * 2 * trueSigma;
-    x.push(xi);
-    y.push(yi);
-  }
+const Normal = distributions.Normal;
+const NUTS = samplers.NUTS;
+const summarize = diagnostics.summarize;
+const effectiveSampleSize = diagnostics.effectiveSampleSize;
 
-  // Define the model
-  const model = new Model('linear_regression');
+// %% [markdown]
+/*
+## Reproducible synthetic data
 
-  // Prior distributions (PyMC-like DAG structure)
-  const alpha = new Normal(0, 10, 'alpha');
-  const beta = new Normal(0, 10, 'beta');
-  const sigma = new Uniform(0.01, 5, 'sigma');
+`setRandomSeed` seeds the single RNG stream shared by every sampler and every
+`.sample()` call, so the whole notebook reproduces across machines. We lay 40
+predictors on an even grid over `[0, 10]` and generate responses from a line
+with a known intercept of 2, slope of 3, and Gaussian noise of standard
+deviation 0.7. Those three numbers are the ground truth the sampler should
+recover; everything downstream sees only `xData` and `yData`.
+*/
 
-  // Add variables to model
-  model.addVariable('alpha', alpha);
-  model.addVariable('beta', beta);
-  model.addVariable('sigma', sigma);
+// %% [javascript]
 
-  // Likelihood: y ~ Normal(alpha + beta*x, sigma)
-  // Note: We need to define a custom likelihood function
-  // Since distributions depend on each other (DAG structure)
+setRandomSeed(1);
 
-  // Override the model's logProb to include the likelihood with dependencies
-  const originalLogProb = model.logProb.bind(model);
-  model.logProb = function(params) {
-    return tf.tidy(() => {
-      // Prior log probabilities
-      let logProb = originalLogProb(params);
+const N = 40;
+const trueAlpha = 2.0;
+const trueBeta = 3.0;
+const trueSigma = 0.7;
 
-      // Likelihood: for each observation, compute p(y_i | x_i, alpha, beta, sigma)
-      const alphaVal = params.alpha;
-      const betaVal = params.beta;
-      const sigmaVal = params.sigma;
+const xData = Array.from({ length: N }, (_, i) => ((i + 0.5) / N) * 10);
+const noise = new Normal(0, trueSigma).sample(N);
+const yData = xData.map((xi, i) => trueAlpha + trueBeta * xi + noise[i]);
 
-      for (let i = 0; i < n; i++) {
-        const mu = typeof alphaVal === 'number'
-          ? alphaVal + betaVal * x[i]
-          : tf.add(alphaVal, tf.mul(betaVal, x[i]));
+({
+  n: N,
+  first_three_x: xData.slice(0, 3).map((v) => Number(v.toFixed(2))),
+  first_three_y: yData.slice(0, 3).map((v) => Number(v.toFixed(2))),
+});
 
-        const likelihood = new Normal(mu, sigmaVal);
-        const logLik = likelihood.logProb(y[i]);
-        logProb = tf.add(logProb, logLik);
-      }
+// %% [markdown]
+/*
+## Declaring the model
 
-      return logProb;
-    });
-  };
+A `Model` is a container of named random variables. The intercept `alpha` and
+slope `beta` get broad `Normal(0, 10)` priors, weakly informative on the scale
+of the data. The noise scale must stay positive, so rather than sample it
+directly (where a leapfrog step could cross zero and stall the chain) we give
+`logSigma` a `Normal(0, 1)` prior and set `sigma = exp(logSigma)` inside the
+likelihood.
 
-  console.log('Model structure:');
-  console.log(model.summary());
+The likelihood is attached with `potential`: a factor whose value is the total
+log density of the observations under `Normal(alpha + beta * x, sigma)`. Because
+mc broadcasts over array-valued parameters, we build the vector of means with a
+single `map` and score every observation in one call. A `deterministic` records
+`sigma` on the natural scale for each draw.
+*/
 
-  // Run MCMC sampling
-  const sampler = new MetropolisHastings(0.5); // proposal std
+// %% [javascript]
 
-  const initialValues = {
-    alpha: 0,
-    beta: 0,
-    sigma: 1
-  };
+const model = new Model('linear-regression');
+model.addVariable('alpha', new Normal(0, 10));
+model.addVariable('beta', new Normal(0, 10));
+model.addVariable('logSigma', new Normal(0, 1));
 
-  const trace = sampler.sample(
-    model,
-    initialValues,
-    1000,  // samples
-    500,   // burn-in
-    1      // thin
-  );
+model.potential('likelihood', (p) => {
+  const sigma = Math.exp(p.logSigma);
+  const mu = xData.map((xi) => p.alpha + p.beta * xi);
+  return new Normal(mu, sigma).logProb(yData);
+});
 
-  // Analyze results
-  printSummary(trace);
+model.deterministic('sigma', (p) => Math.exp(p.logSigma));
 
-  console.log('\nComparing with true values:');
-  console.log(`True α: ${trueAlpha.toFixed(4)}`);
-  console.log(`True β: ${trueBeta.toFixed(4)}`);
-  console.log(`True σ: ${trueSigma.toFixed(4)}`);
-}
+// logProb evaluates the unnormalized posterior at a point. It is higher near
+// the data-generating line than far from it, which is what the sampler climbs.
+({
+  logProb_at_truth: model.logProb({ alpha: 2, beta: 3, logSigma: Math.log(0.7) }),
+  logProb_at_origin: model.logProb({ alpha: 0, beta: 0, logSigma: 0 }),
+});
 
-main();
+// %% [markdown]
+/*
+## Sampling the posterior with NUTS
+
+The No-U-Turn Sampler tunes its own trajectory length and adapts the leapfrog
+step size by dual averaging during warmup. We take 500 warmup iterations
+(discarded) followed by 500 kept draws. The reported acceptance rate is the
+mean Metropolis probability along each trajectory; NUTS targets 0.8 by default,
+so a value near there means the step size adapted well.
+*/
+
+// %% [javascript]
+
+const nuts = new NUTS({ stepSize: 0.01, targetAcceptance: 0.8 });
+const fit = nuts.sample(
+  model,
+  { alpha: 0, beta: 0, logSigma: 0 },
+  { nSamples: 500, nWarmup: 500 },
+);
+
+({
+  acceptance_rate: fit.acceptanceRate,
+  step_size: fit.stepSize,
+  n_draws: fit.trace.alpha.length,
+});
+
+// %% [markdown]
+/*
+## Summarizing the posterior
+
+`summarize` reduces a column of draws to its mean, standard deviation, and a
+95 percent credible interval (`hdi_2_5` to `hdi_97_5`); `effectiveSampleSize`
+reports how many independent draws the autocorrelated chain is worth. All three
+posterior means land close to the values used to generate the data, and every
+credible interval brackets its target -- the intercept near 2, the slope near
+3, and the noise scale near 0.7.
+*/
+
+// %% [javascript]
+
+const alphaPost = summarize(fit.trace.alpha);
+const betaPost = summarize(fit.trace.beta);
+const sigmaPost = summarize(fit.trace.sigma);
+
+({
+  alpha: {
+    posterior_mean: alphaPost.mean,
+    credible_interval_95: [alphaPost.hdi_2_5, alphaPost.hdi_97_5],
+    ess: effectiveSampleSize(fit.trace.alpha),
+    true_value: trueAlpha,
+  },
+  beta: {
+    posterior_mean: betaPost.mean,
+    credible_interval_95: [betaPost.hdi_2_5, betaPost.hdi_97_5],
+    ess: effectiveSampleSize(fit.trace.beta),
+    true_value: trueBeta,
+  },
+  sigma: {
+    posterior_mean: sigmaPost.mean,
+    credible_interval_95: [sigmaPost.hdi_2_5, sigmaPost.hdi_97_5],
+    true_value: trueSigma,
+  },
+});

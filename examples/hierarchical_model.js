@@ -1,142 +1,202 @@
-/**
- * Hierarchical Model Example
- *
- * This example demonstrates a hierarchical Bayesian model (multilevel model).
- * We model measurements from multiple groups, where each group has its own mean
- * but these means are drawn from a common distribution (partial pooling).
- *
- * Model structure (DAG):
- *   μ_global ~ Normal(0, 10)
- *   σ_global ~ Uniform(0.1, 10)
- *   μ_group[j] ~ Normal(μ_global, σ_global) for each group j
- *   σ_within ~ Uniform(0.1, 10)
- *   y[i] ~ Normal(μ_group[group[i]], σ_within)
- */
+// ---
+// title: Hierarchical models and partial pooling
+// id: mc-hierarchical-model
+// ---
 
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '../src/index.js';
-import * as tf from '@tensorflow/tfjs-node';
+// %% [markdown]
+/*
+# Hierarchical models and partial pooling
 
-async function main() {
-  console.log('=== Hierarchical Bayesian Model with mc ===\n');
+When data arrive in groups -- students in schools, patients in clinics, sensors
+on machines -- we rarely want to fit each group in isolation (small groups are
+noisy) or pool everything into one number (that ignores real differences).
+A hierarchical model strikes the balance: each group gets its own mean, but the
+group means are themselves drawn from a shared population distribution. Groups
+with little data are pulled toward the grand mean, a phenomenon called *partial
+pooling* or *shrinkage*, while groups with plenty of data are left near their
+own average.
 
-  // Generate synthetic hierarchical data
-  const nGroups = 5;
-  const nPerGroup = 20;
-  const trueGlobalMu = 10.0;
-  const trueGlobalSigma = 2.0;
-  const trueWithinSigma = 1.0;
+`@tangent.to/mc` builds this as a directed graph of random variables and draws
+from the posterior with the No-U-Turn Sampler -- on plain numbers and arrays, no
+TensorFlow, straight in the browser.
+*/
 
-  const groupMeans = [];
-  const data = [];
-  const groups = [];
+// %% [javascript]
 
-  console.log('Generating synthetic hierarchical data...');
-  console.log(`True global mean: ${trueGlobalMu}`);
-  console.log(`True global std: ${trueGlobalSigma}`);
-  console.log(`True within-group std: ${trueWithinSigma}\n`);
+import { Model, distributions, samplers, setRandomSeed, diagnostics } from 'https://esm.sh/@tangent.to/mc';
 
-  // Generate group means from global distribution
-  for (let j = 0; j < nGroups; j++) {
-    const groupMean = trueGlobalMu + (Math.random() - 0.5) * 2 * trueGlobalSigma;
-    groupMeans.push(groupMean);
-    console.log(`Group ${j} true mean: ${groupMean.toFixed(2)}`);
+const Normal = distributions.Normal;
+const NUTS = samplers.NUTS;
+const summarize = diagnostics.summarize;
+const effectiveSampleSize = diagnostics.effectiveSampleSize;
 
-    // Generate observations within group
-    for (let i = 0; i < nPerGroup; i++) {
-      const yi = groupMean + (Math.random() - 0.5) * 2 * trueWithinSigma;
-      data.push(yi);
-      groups.push(j);
-    }
-  }
+// %% [markdown]
+/*
+## Reproducible synthetic data
 
-  console.log(`\nGenerated ${data.length} observations across ${nGroups} groups\n`);
+`setRandomSeed` seeds the single RNG stream shared by every sampler and every
+`.sample()` call. We create 8 groups whose true means are drawn from a
+population with grand mean 5 and between-group standard deviation 2, then sample
+observations around each group mean with within-group noise 1.5. The group sizes
+are deliberately unequal -- from 30 observations down to just 3 -- so we can watch
+the small groups shrink toward the grand mean while the large ones stand their
+ground.
+*/
 
-  // Define the hierarchical model
-  const model = new Model('hierarchical_model');
+// %% [javascript]
 
-  // Hyperpriors (global parameters)
-  const muGlobal = new Normal(0, 10, 'mu_global');
-  const sigmaGlobal = new Uniform(0.1, 10, 'sigma_global');
-  const sigmaWithin = new Uniform(0.1, 10, 'sigma_within');
+setRandomSeed(12);
 
-  model.addVariable('mu_global', muGlobal);
-  model.addVariable('sigma_global', sigmaGlobal);
-  model.addVariable('sigma_within', sigmaWithin);
+const trueMu = 5.0;
+const trueTau = 2.0;
+const trueSigma = 1.5;
+const groupSizes = [30, 25, 20, 15, 10, 6, 4, 3];
+const J = groupSizes.length;
 
-  // Group-level parameters (one mean per group)
-  for (let j = 0; j < nGroups; j++) {
-    const muGroup = new Normal(0, 10, `mu_group_${j}`);
-    model.addVariable(`mu_group_${j}`, muGroup);
-  }
+const trueTheta = Array.from({ length: J }, () => new Normal(trueMu, trueTau).sample());
 
-  // Override logProb to implement the hierarchical structure
-  const originalLogProb = model.logProb.bind(model);
-  model.logProb = function(params) {
-    return tf.tidy(() => {
-      let logProb = tf.scalar(0);
-
-      // Hyperpriors
-      logProb = tf.add(logProb, muGlobal.logProb(params.mu_global));
-      logProb = tf.add(logProb, sigmaGlobal.logProb(params.sigma_global));
-      logProb = tf.add(logProb, sigmaWithin.logProb(params.sigma_within));
-
-      // Group-level priors: μ_group[j] ~ Normal(μ_global, σ_global)
-      for (let j = 0; j < nGroups; j++) {
-        const groupPrior = new Normal(params.mu_global, params.sigma_global);
-        const groupLogProb = groupPrior.logProb(params[`mu_group_${j}`]);
-        logProb = tf.add(logProb, groupLogProb);
-      }
-
-      // Likelihood: y[i] ~ Normal(μ_group[group[i]], σ_within)
-      for (let i = 0; i < data.length; i++) {
-        const groupIdx = groups[i];
-        const groupMean = params[`mu_group_${groupIdx}`];
-        const likelihood = new Normal(groupMean, params.sigma_within);
-        const logLik = likelihood.logProb(data[i]);
-        logProb = tf.add(logProb, logLik);
-      }
-
-      return logProb;
-    });
-  };
-
-  console.log('Model structure:');
-  console.log(model.summary());
-
-  // Initialize parameters
-  const initialValues = {
-    mu_global: 0,
-    sigma_global: 1,
-    sigma_within: 1
-  };
-
-  for (let j = 0; j < nGroups; j++) {
-    initialValues[`mu_group_${j}`] = 0;
-  }
-
-  // Run MCMC sampling
-  console.log('Running MCMC sampling...');
-  const sampler = new MetropolisHastings(0.3);
-
-  const trace = sampler.sample(
-    model,
-    initialValues,
-    2000,  // samples
-    1000,  // burn-in
-    2      // thin
-  );
-
-  // Analyze results
-  printSummary(trace);
-
-  console.log('\nComparing with true values:');
-  console.log(`True global μ: ${trueGlobalMu.toFixed(4)}`);
-  console.log(`True global σ: ${trueGlobalSigma.toFixed(4)}`);
-  console.log(`True within σ: ${trueWithinSigma.toFixed(4)}`);
-  console.log('\nTrue group means:');
-  for (let j = 0; j < nGroups; j++) {
-    console.log(`  Group ${j}: ${groupMeans[j].toFixed(4)}`);
+const yData = [];
+const groupIdx = [];
+for (let j = 0; j < J; j++) {
+  for (let i = 0; i < groupSizes[j]; i++) {
+    yData.push(new Normal(trueTheta[j], trueSigma).sample());
+    groupIdx.push(j);
   }
 }
 
-main();
+const rawMean = Array.from({ length: J }, (_, j) => {
+  const vals = yData.filter((_, i) => groupIdx[i] === j);
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+});
+
+({
+  n_groups: J,
+  n_observations: yData.length,
+  group_sizes: groupSizes,
+  raw_group_means: rawMean.map((v) => Number(v.toFixed(2))),
+});
+
+// %% [markdown]
+/*
+## Declaring the model with a non-centered parameterization
+
+The natural hierarchy is `theta[j] ~ Normal(mu, tau)` for each group and
+`y ~ Normal(theta[group], sigma)`. Sampling group means directly, though, creates
+a pinched "funnel" that stalls MCMC when `tau` is small. The standard remedy is a
+*non-centered* parameterization: give each group a standard normal `z[j]` and set
+`theta[j] = mu + tau * z[j]`. The `z` prior is exactly `Normal(0, 1)`, so it slots
+straight into `addVariable` as a single vector variable of length J -- mc broadcasts
+the prior and its analytic gradient over the whole array.
+
+The grand mean `mu` gets a broad `Normal(0, 10)` prior. Both scales must stay
+positive, so `tau` and `sigma` are sampled on the log scale. The likelihood is a
+`potential` that reconstructs the group means, gathers the right one for each
+observation, and scores them in a single broadcast call. Deterministics record
+`tau`, `sigma`, and every group mean on the natural scale.
+*/
+
+// %% [javascript]
+
+const model = new Model('hierarchical');
+model.addVariable('mu', new Normal(0, 10));
+model.addVariable('logTau', new Normal(0, 1));
+model.addVariable('logSigma', new Normal(0, 1));
+model.addVariable('z', new Normal(0, 1)); // vector of J standard normals (non-centered)
+
+model.potential('likelihood', (p) => {
+  const tau = Math.exp(p.logTau);
+  const sigma = Math.exp(p.logSigma);
+  const theta = p.z.map((zj) => p.mu + tau * zj);
+  const muObs = groupIdx.map((g) => theta[g]);
+  return new Normal(muObs, sigma).logProb(yData);
+});
+
+model.deterministic('tau', (p) => Math.exp(p.logTau));
+model.deterministic('sigma', (p) => Math.exp(p.logSigma));
+for (let j = 0; j < J; j++) {
+  model.deterministic(`theta_${j}`, (p) => p.mu + Math.exp(p.logTau) * p.z[j]);
+}
+
+model.getFreeVariableNames();
+
+// %% [markdown]
+/*
+## Sampling the posterior with NUTS
+
+We initialize every `z` at zero and run 1000 warmup iterations followed by 1000
+kept draws, nudging the target acceptance up to 0.9 for the mildly awkward
+hierarchical geometry. The acceptance rate below is the mean Metropolis
+probability along each trajectory, and the effective sample size for the grand
+mean confirms the chain mixes despite the funnel.
+*/
+
+// %% [javascript]
+
+const init = { mu: 0, logTau: 0, logSigma: 0, z: Array(J).fill(0) };
+const nuts = new NUTS({ stepSize: 0.05, targetAcceptance: 0.9 });
+const fit = nuts.sample(model, init, { nSamples: 1000, nWarmup: 1000 });
+
+({
+  acceptance_rate: fit.acceptanceRate,
+  step_size: fit.stepSize,
+  n_draws: fit.trace.mu.length,
+  ess_mu: effectiveSampleSize(fit.trace.mu),
+});
+
+// %% [markdown]
+/*
+## Population parameters
+
+The three hyperparameters are recovered: the posterior mean of `mu` sits near the
+true grand mean of 5, `tau` near the between-group spread of 2, and `sigma` near
+the within-group noise of 1.5. Each credible interval brackets its target.
+*/
+
+// %% [javascript]
+
+const muPost = summarize(fit.trace.mu);
+const tauPost = summarize(fit.trace.tau);
+const sigmaPost = summarize(fit.trace.sigma);
+
+({
+  mu: {
+    posterior_mean: muPost.mean,
+    credible_interval_95: [muPost.hdi_2_5, muPost.hdi_97_5],
+    true_value: trueMu,
+  },
+  tau: {
+    posterior_mean: tauPost.mean,
+    credible_interval_95: [tauPost.hdi_2_5, tauPost.hdi_97_5],
+    true_value: trueTau,
+  },
+  sigma: {
+    posterior_mean: sigmaPost.mean,
+    credible_interval_95: [sigmaPost.hdi_2_5, sigmaPost.hdi_97_5],
+    true_value: trueSigma,
+  },
+});
+
+// %% [markdown]
+/*
+## Shrinkage in action
+
+The point of the hierarchy is what it does to the group estimates. For each group
+we compare its raw sample mean to its posterior mean and measure how far the
+posterior pulled it toward the grand mean. The pattern is exactly partial pooling:
+the large groups (30, 25, 20 observations) barely move, while the smallest groups
+(6, 4, 3 observations) are tugged noticeably toward the population center -- the
+model trusts their noisy averages less and borrows strength from the rest.
+*/
+
+// %% [javascript]
+
+Array.from({ length: J }, (_, j) => {
+  const post = summarize(fit.trace[`theta_${j}`]);
+  return {
+    group: j,
+    n: groupSizes[j],
+    raw_mean: Number(rawMean[j].toFixed(2)),
+    posterior_mean: Number(post.mean.toFixed(2)),
+    shrinkage_toward_grand_mean: Number((rawMean[j] - post.mean).toFixed(2)),
+  };
+});
