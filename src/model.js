@@ -58,6 +58,7 @@ export class Model {
     this.variables = new Map(); // Random variables in the model
     this.observedVars = new Map(); // Observed data
     this.potentials = new Map(); // Generic log-density terms (factors / likelihoods)
+    this.potentialGrads = new Map(); // Optional analytic gradients for potentials
     this.deterministics = new Map(); // Named transforms recorded in the trace
   }
 
@@ -76,15 +77,31 @@ export class Model {
    *   new Normal(xData.map((x) => v.slope * x + v.intercept), v.sigma).logProb(yData));
    * ```
    *
-   * Gradients of potentials are computed by central finite differences; priors
-   * added with {@link Model#addVariable} get analytic gradients.
+   * Gradients of potentials are estimated by central finite differences by
+   * default; priors added with {@link Model#addVariable} get analytic gradients.
+   * For a large data term this finite-difference cost (2·(#free params) extra
+   * evaluations of `fn` per gradient) dominates NUTS/HMC. Pass an optional
+   * `gradFn` returning the analytic gradient of this term to avoid it entirely:
+   *
+   * ```js
+   * model.potential('y', (v) => new Normal(mu(v), v.sigma).logProb(yData),
+   *   (v) => ({ slope: dSlope(v), intercept: dIntercept(v), sigma: dSigma(v) }));
+   * ```
+   *
+   * `gradFn(params)` must return an object mapping each free-variable name to the
+   * partial derivative of THIS term's log-density with respect to it (a number,
+   * or an array for a vector-valued variable). It is added to the analytic prior
+   * gradients; omit an entry whose partial is zero.
    *
    * @param {string} name - Identifier for the term
    * @param {(params: Object) => (number|Array<number>)} fn - Returns log-density value(s)
+   * @param {(params: Object) => Object} [gradFn] - Optional analytic gradient of `fn`
    * @returns {Model} this
    */
-  potential(name, fn) {
+  potential(name, fn, gradFn = null) {
     this.potentials.set(name, fn);
+    if (gradFn) this.potentialGrads.set(name, gradFn);
+    else this.potentialGrads.delete(name);
     return this;
   }
 
@@ -194,33 +211,69 @@ export class Model {
       }
     }
 
-    // Potentials: value plus finite-difference gradients per free component
+    // Potentials: value plus gradient. A potential registered with an analytic
+    // gradient function contributes it directly (one pass); the rest fall back to
+    // central finite differences on their pooled sum, exactly as before. Analytic
+    // gradients skip the 2·(#free params) extra evaluations per gradient that
+    // finite differences require, which dominates NUTS/HMC on a large data term.
     if (this.potentials.size) {
       logProb += this._potentialSum(params);
 
-      for (const name of Object.keys(params)) {
-        const v = params[name];
-
-        if (Array.isArray(v)) {
-          const g = Array.isArray(gradients[name])
-            ? gradients[name].slice()
-            : new Array(v.length).fill(gradients[name] ?? 0);
-          const work = { ...params, [name]: v.slice() };
-          for (let i = 0; i < v.length; i++) {
-            const h = 1e-6 * Math.max(1, Math.abs(v[i]));
-            work[name][i] = v[i] + h;
-            const fPlus = this._potentialSum(work);
-            work[name][i] = v[i] - h;
-            const fMinus = this._potentialSum(work);
-            work[name][i] = v[i];
-            g[i] += (fPlus - fMinus) / (2 * h);
+      const fdPotentials = [];
+      for (const [pname, fn] of this.potentials.entries()) {
+        const gradFn = this.potentialGrads.get(pname);
+        if (!gradFn) {
+          fdPotentials.push(fn);
+          continue;
+        }
+        const g = gradFn(params);
+        for (const name of Object.keys(g)) {
+          const val = g[name];
+          const cur = gradients[name];
+          if (Array.isArray(val)) {
+            if (Array.isArray(cur)) {
+              for (let i = 0; i < val.length; i++) cur[i] += val[i];
+            } else {
+              const base = cur ?? 0;
+              gradients[name] = val.map((v) => v + base);
+            }
+          } else {
+            gradients[name] = (cur ?? 0) + val;
           }
-          gradients[name] = g;
-        } else {
-          const h = 1e-6 * Math.max(1, Math.abs(v));
-          const fPlus = this._potentialSum({ ...params, [name]: v + h });
-          const fMinus = this._potentialSum({ ...params, [name]: v - h });
-          gradients[name] = (gradients[name] ?? 0) + (fPlus - fMinus) / (2 * h);
+        }
+      }
+
+      // Finite-difference the pooled sum of any potentials without an analytic
+      // gradient (no-op when every term supplied one).
+      if (fdPotentials.length) {
+        const potSum = (work) => {
+          let s = 0;
+          for (const fn of fdPotentials) s += sumOf(fn(work));
+          return s;
+        };
+        for (const name of Object.keys(params)) {
+          const v = params[name];
+          if (Array.isArray(v)) {
+            const g = Array.isArray(gradients[name])
+              ? gradients[name]
+              : new Array(v.length).fill(gradients[name] ?? 0);
+            const work = { ...params, [name]: v.slice() };
+            for (let i = 0; i < v.length; i++) {
+              const h = 1e-6 * Math.max(1, Math.abs(v[i]));
+              work[name][i] = v[i] + h;
+              const fPlus = potSum(work);
+              work[name][i] = v[i] - h;
+              const fMinus = potSum(work);
+              work[name][i] = v[i];
+              g[i] += (fPlus - fMinus) / (2 * h);
+            }
+            gradients[name] = g;
+          } else {
+            const h = 1e-6 * Math.max(1, Math.abs(v));
+            const fPlus = potSum({ ...params, [name]: v + h });
+            const fMinus = potSum({ ...params, [name]: v - h });
+            gradients[name] = (gradients[name] ?? 0) + (fPlus - fMinus) / (2 * h);
+          }
         }
       }
     }
