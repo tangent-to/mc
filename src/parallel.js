@@ -170,6 +170,38 @@ parentPort.on('message', async (msg) => {
 
 /** Run one chain spec in a fresh worker; resolves with __runChain's result. */
 async function runChainInWorker(spec) {
+  // Web path FIRST: browsers, Deno, and worker contexts define a global
+  // Worker; Node does not. Detecting Node via `process` instead is
+  // unreliable — CDN builds (e.g. esm.sh) shim `process.versions.node` in
+  // the browser, which would route this to worker_threads, fail, and
+  // silently degrade to the sequential fallback.
+  if (typeof Worker !== 'undefined') {
+    const blobUrl = URL.createObjectURL(new Blob([BLOB_WORKER_SRC], { type: 'text/javascript' }));
+    try {
+      return await new Promise((resolve, reject) => {
+        let worker;
+        try {
+          worker = new Worker(blobUrl, { type: 'module' });
+        } catch (err) {
+          reject(err);
+          return;
+        }
+        worker.onmessage = (e) => {
+          worker.terminate();
+          if (e.data.ok) resolve(e.data.result);
+          else reject(new Error(e.data.error));
+        };
+        worker.onerror = (e) => {
+          worker.terminate();
+          reject(new Error(e.message || 'chain worker failed to start'));
+        };
+        worker.postMessage({ moduleUrl: MODULE_URL, spec });
+      });
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
   if (isNode()) {
     // Computed specifier so browser bundlers (esbuild/vite/rollup) don't try
     // to resolve the Node built-in; this branch only runs under Node.
@@ -190,33 +222,7 @@ async function runChainInWorker(spec) {
     });
   }
 
-  if (typeof Worker === 'undefined') {
-    throw new Error('no Worker support in this runtime');
-  }
-  const blobUrl = URL.createObjectURL(new Blob([BLOB_WORKER_SRC], { type: 'text/javascript' }));
-  try {
-    return await new Promise((resolve, reject) => {
-      let worker;
-      try {
-        worker = new Worker(blobUrl, { type: 'module' });
-      } catch (err) {
-        reject(err);
-        return;
-      }
-      worker.onmessage = (e) => {
-        worker.terminate();
-        if (e.data.ok) resolve(e.data.result);
-        else reject(new Error(e.data.error));
-      };
-      worker.onerror = (e) => {
-        worker.terminate();
-        reject(new Error(e.message || 'chain worker failed to start'));
-      };
-      worker.postMessage({ moduleUrl: MODULE_URL, spec });
-    });
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
+  throw new Error('no Worker support in this runtime');
 }
 
 /**
