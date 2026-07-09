@@ -211,74 +211,111 @@ export class Model {
       }
     }
 
-    // Potentials: value plus gradient. A potential registered with an analytic
-    // gradient function contributes it directly (one pass); the rest fall back to
-    // central finite differences on their pooled sum, exactly as before. Analytic
-    // gradients skip the 2·(#free params) extra evaluations per gradient that
-    // finite differences require, which dominates NUTS/HMC on a large data term.
+    // Potentials: value plus gradient. Analytic gradients skip the
+    // 2·(#free params) extra evaluations per gradient that finite differences
+    // require, which dominates NUTS/HMC on a large data term.
     if (this.potentials.size) {
       logProb += this._potentialSum(params);
+      this._potentialGradients(params, gradients);
+    }
 
-      const fdPotentials = [];
-      for (const [pname, fn] of this.potentials.entries()) {
-        const gradFn = this.potentialGrads.get(pname);
-        if (!gradFn) {
-          fdPotentials.push(fn);
-          continue;
-        }
-        const g = gradFn(params);
-        for (const name of Object.keys(g)) {
-          const val = g[name];
-          const cur = gradients[name];
-          if (Array.isArray(val)) {
-            if (Array.isArray(cur)) {
-              for (let i = 0; i < val.length; i++) cur[i] += val[i];
-            } else {
-              const base = cur ?? 0;
-              gradients[name] = val.map((v) => v + base);
-            }
-          } else {
-            gradients[name] = (cur ?? 0) + val;
-          }
-        }
+    return { logProb, gradients };
+  }
+
+  /**
+   * Gradient of the joint log-probability WITHOUT its value — exactly
+   * `logProbAndGradient(params).gradients`, skipping the potential-value pass.
+   *
+   * Samplers' leapfrog steps only consume the gradient, but for a model with
+   * an analytic potential gradient, computing the discarded value costs a
+   * full extra pass over the data at every leapfrog step. This method
+   * omits it; the returned gradients are identical.
+   *
+   * @param {Object} params - Parameter values as {name: number|Array} pairs
+   * @returns {Object} `{name: number|Array}` map of gradients
+   */
+  gradientsOnly(params) {
+    const gradients = {};
+
+    for (const [name, distribution] of this.variables.entries()) {
+      const value = params[name];
+      if (value !== undefined) {
+        gradients[name] = distribution.dlogProbDx(value);
       }
+    }
 
-      // Finite-difference the pooled sum of any potentials without an analytic
-      // gradient (no-op when every term supplied one).
-      if (fdPotentials.length) {
-        const potSum = (work) => {
-          let s = 0;
-          for (const fn of fdPotentials) s += sumOf(fn(work));
-          return s;
-        };
-        for (const name of Object.keys(params)) {
-          const v = params[name];
-          if (Array.isArray(v)) {
-            const g = Array.isArray(gradients[name])
-              ? gradients[name]
-              : new Array(v.length).fill(gradients[name] ?? 0);
-            const work = { ...params, [name]: v.slice() };
-            for (let i = 0; i < v.length; i++) {
-              const h = 1e-6 * Math.max(1, Math.abs(v[i]));
-              work[name][i] = v[i] + h;
-              const fPlus = potSum(work);
-              work[name][i] = v[i] - h;
-              const fMinus = potSum(work);
-              work[name][i] = v[i];
-              g[i] += (fPlus - fMinus) / (2 * h);
-            }
-            gradients[name] = g;
+    if (this.potentials.size) {
+      this._potentialGradients(params, gradients);
+    }
+
+    return gradients;
+  }
+
+  /**
+   * Accumulate every potential's gradient into `gradients` (mutated).
+   * A potential registered with an analytic gradient function contributes it
+   * directly (one pass); the rest fall back to central finite differences on
+   * their pooled sum. Shared by logProbAndGradient and gradientsOnly.
+   * @private
+   */
+  _potentialGradients(params, gradients) {
+    const fdPotentials = [];
+    for (const [pname, fn] of this.potentials.entries()) {
+      const gradFn = this.potentialGrads.get(pname);
+      if (!gradFn) {
+        fdPotentials.push(fn);
+        continue;
+      }
+      const g = gradFn(params);
+      for (const name of Object.keys(g)) {
+        const val = g[name];
+        const cur = gradients[name];
+        if (Array.isArray(val)) {
+          if (Array.isArray(cur)) {
+            for (let i = 0; i < val.length; i++) cur[i] += val[i];
           } else {
-            const h = 1e-6 * Math.max(1, Math.abs(v));
-            const fPlus = potSum({ ...params, [name]: v + h });
-            const fMinus = potSum({ ...params, [name]: v - h });
-            gradients[name] = (gradients[name] ?? 0) + (fPlus - fMinus) / (2 * h);
+            const base = cur ?? 0;
+            gradients[name] = val.map((v) => v + base);
           }
+        } else {
+          gradients[name] = (cur ?? 0) + val;
         }
       }
     }
 
-    return { logProb, gradients };
+    // Finite-difference the pooled sum of any potentials without an analytic
+    // gradient (no-op when every term supplied one).
+    if (fdPotentials.length) {
+      const potSum = (work) => {
+        let s = 0;
+        for (const fn of fdPotentials) s += sumOf(fn(work));
+        return s;
+      };
+      for (const name of Object.keys(params)) {
+        const v = params[name];
+        if (Array.isArray(v)) {
+          const g = Array.isArray(gradients[name])
+            ? gradients[name]
+            : new Array(v.length).fill(gradients[name] ?? 0);
+          const work = { ...params, [name]: v.slice() };
+          for (let i = 0; i < v.length; i++) {
+            const h = 1e-6 * Math.max(1, Math.abs(v[i]));
+            work[name][i] = v[i] + h;
+            const fPlus = potSum(work);
+            work[name][i] = v[i] - h;
+            const fMinus = potSum(work);
+            work[name][i] = v[i];
+            g[i] += (fPlus - fMinus) / (2 * h);
+          }
+          gradients[name] = g;
+        } else {
+          const h = 1e-6 * Math.max(1, Math.abs(v));
+          const fPlus = potSum({ ...params, [name]: v + h });
+          const fMinus = potSum({ ...params, [name]: v - h });
+          gradients[name] = (gradients[name] ?? 0) + (fPlus - fMinus) / (2 * h);
+        }
+      }
+    }
   }
 
   /**

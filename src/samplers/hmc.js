@@ -62,8 +62,15 @@ export class HamiltonianMC {
   leapfrog(position, momentum, model) {
     const variableNames = Object.keys(position);
 
+    // Only the gradient is consumed here — gradientsOnly skips the potential
+    // value pass that logProbAndGradient computes and this method discards.
+    const gradOf = (q) =>
+      typeof model.gradientsOnly === 'function'
+        ? model.gradientsOnly(q)
+        : model.logProbAndGradient(q).gradients;
+
     // Half step for momentum
-    const grad = model.logProbAndGradient(position).gradients;
+    const grad = gradOf(position);
     let pNew = {};
     for (const name of variableNames) {
       pNew[name] = axpy(momentum[name], this.stepSize / 2, grad[name]);
@@ -80,7 +87,7 @@ export class HamiltonianMC {
 
       // Full step for momentum (except at end)
       if (i < this.nSteps - 1) {
-        const gradNew = model.logProbAndGradient(qNew).gradients;
+        const gradNew = gradOf(qNew);
         for (const name of variableNames) {
           pNew[name] = axpy(pNew[name], this.stepSize, gradNew[name]);
         }
@@ -88,7 +95,7 @@ export class HamiltonianMC {
     }
 
     // Half step for momentum at end
-    const gradFinal = model.logProbAndGradient(qNew).gradients;
+    const gradFinal = gradOf(qNew);
     for (const name of variableNames) {
       pNew[name] = axpy(pNew[name], this.stepSize / 2, gradFinal[name]);
     }

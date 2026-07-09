@@ -80,8 +80,16 @@ export class NUTS {
   leapfrog(position, momentum, stepSize, model) {
     const variableNames = Object.keys(position);
 
+    // Only the gradient is needed here; gradientsOnly skips the potential
+    // VALUE pass (a full pass over the data for a large likelihood term)
+    // that logProbAndGradient would compute and this method would discard.
+    const gradOf = (q) =>
+      typeof model.gradientsOnly === 'function'
+        ? model.gradientsOnly(q)
+        : model.logProbAndGradient(q).gradients;
+
     // Half step for momentum
-    const grad1 = model.logProbAndGradient(position).gradients;
+    const grad1 = gradOf(position);
     const pHalf = {};
     for (const name of variableNames) {
       pHalf[name] = axpy(momentum[name], stepSize / 2, grad1[name]);
@@ -94,7 +102,7 @@ export class NUTS {
     }
 
     // Half step for momentum
-    const grad2 = model.logProbAndGradient(qNew).gradients;
+    const grad2 = gradOf(qNew);
     const pNew = {};
     for (const name of variableNames) {
       pNew[name] = axpy(pHalf[name], stepSize / 2, grad2[name]);
