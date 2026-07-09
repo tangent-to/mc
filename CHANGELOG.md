@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-09
+
+### Added
+- **Parallel chains: `sampleChains(modelFactory, options)`.** Runs each MCMC chain in its own worker (browser/Deno `Worker`, Node `worker_threads`), so four chains cost roughly one chain of wall-clock time (~2.8x measured on 4 chains including worker startup). The model is described by a self-contained factory `(data, mc) => Model` — serialized to each worker — plus structured-clonable `data`. Returns `{chains, byChain, trace, acceptanceRates, seeds, parallel}`; `byChain` feeds `gelmanRubin` directly. Per-chain seeds derive from `options.seed` (reproducible, but draws differ from a single-stream sequential run). Falls back to an in-process sequential run with identical results when the runtime has no workers or with `parallel: false`.
+
 ## [0.6.2] - 2026-07-09
 
 ### Fixed

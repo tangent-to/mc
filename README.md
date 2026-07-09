@@ -275,6 +275,58 @@ const trace = sampler.sample(model, initialValues, { nSamples, burnIn, thin });
 
 **Best for**: Complex models with many parameters, faster convergence
 
+#### Parallel chains: `sampleChains`
+
+MCMC chains are independent, so they can run simultaneously — one worker per
+chain (browser/Deno `Worker` or Node `worker_threads`). Four chains cost
+roughly one chain of wall-clock time:
+
+```javascript
+import { sampleChains, gelmanRubin } from '@tangent.to/mc';
+
+const fit = await sampleChains(
+  // The factory must be SELF-CONTAINED: it is serialized to each worker, so
+  // it may only use its two arguments (data, mc) and JavaScript built-ins.
+  (data, mc) => {
+    const model = new mc.Model('lin');
+    model.addVariable('a', new mc.distributions.Normal(0, 5));
+    model.addVariable('b', new mc.distributions.Normal(0, 5));
+    model.addVariable('logSig', new mc.distributions.Normal(0, 1));
+    model.potential('lik', (p) => {
+      const sig = Math.exp(p.logSig);
+      const mu = data.xs.map((x) => p.a + p.b * x);
+      return new mc.distributions.Normal(mu, sig).logProb(data.ys);
+    });
+    return model;
+  },
+  {
+    data: { xs, ys },            // structured-clonable data for the factory
+    chains: 4,
+    inits: [init1, init2, init3, init4], // over-dispersed starts, one per chain
+    sampler: 'nuts',             // 'nuts' | 'hmc' | 'metropolis'
+    samplerOptions: { stepSize: 0.02, maxTreeDepth: 8, targetAcceptance: 0.85 },
+    nSamples: 400, nWarmup: 400,
+    seed: 20240115,              // per-chain seeds are derived from this
+  },
+);
+
+fit.byChain.a      // [[chain-0 draws], [chain-1 draws], …] → gelmanRubin(fit.byChain.a)
+fit.trace.a        // pooled draws across chains
+fit.chains[0]      // {trace, acceptanceRate, stepSize, seed} per chain
+fit.parallel       // false if the runtime had no workers (sequential fallback)
+```
+
+Notes:
+- **Reproducible, but differently seeded**: chain *c* is seeded from
+  `options.seed`, so a `sampleChains` run reproduces exactly, but its draws
+  differ from a single-stream sequential run of the same chains (independent
+  per-chain streams are what R-hat assumes).
+- **Fallback**: with `parallel: false`, or in a runtime without workers, the
+  same chains run in-process with the same seeds — identical results, serial
+  wall-clock.
+- Everything the model needs must travel through `options.data`; referencing
+  an outer variable from the factory throws with guidance.
+
 ### Trace Analysis
 
 mc provides utilities for analyzing MCMC samples:

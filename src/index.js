@@ -23,6 +23,13 @@ export { getRng, setRandomSeed };
 
 import { Model } from './model.js';
 
+// Parallel chains (one worker per chain; sequential in-process fallback).
+// __runChain is internal but must be exported: the chain workers import this
+// module by URL (also when bundled, where parallel.js is inlined here) and
+// call it.
+import { sampleChains, __runChain } from './parallel.js';
+export { sampleChains, __runChain };
+
 import {
   Distribution,
   Normal,
@@ -163,6 +170,7 @@ export default {
   Model,
   setRandomSeed,
   getRng,
+  sampleChains,
   distributions,
   samplers,
   diagnostics,

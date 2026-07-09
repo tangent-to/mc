@@ -1,0 +1,25 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@tangent/proba@0.1": "0.1.1"
+  },
+  "jsr": {
+    "@tangent/proba@0.1.1": {
+      "integrity": "43caf3fc7d2b56d3403ef7cad583408245e389edf637d8fac851d4ce7bc047c2"
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@tangent/proba@0.1"
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:@tangent.to/proba@0.1",
+        "npm:esbuild@~0.25.11",
+        "npm:typedoc-plugin-markdown@^4.4.0",
+        "npm:typedoc@0.28",
+        "npm:vitest@^1.6.0"
+      ]
+    }
+  }
+}
