@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-09
+
+### Changed
+- **Faster leapfrog: `Model.gradientsOnly()`.** NUTS (and the legacy `hmc.js`) called `logProbAndGradient` in every leapfrog step and discarded the log-probability, paying a full potential-value pass over the data on top of the gradient pass. `Model.gradientsOnly(params)` returns identical gradients without the value pass, and the samplers use it; the Hamiltonians used for acceptance still come from the same `logProb` calls as before. Seeded traces are bit-identical; NUTS with analytic potential gradients runs ~2x faster (~17% with the finite-difference fallback). `hmc-vector` (the exported `HMC`) already consumed both value and gradient from one call and is unchanged.
+
+## [0.6.0] - 2026-07-08
+
 ### Fixed
 - **NUTS slice-membership criterion.** In the tree builder a state was tested for slice membership with `slice <= exp(H0 - H)` instead of `slice <= exp(-H)` (the slice variable is drawn on the `exp(-H0)` scale). Because `H0` scales with the data log-likelihood magnitude, the test was effectively always true, disabling the energy weighting so NUTS sampled trajectory states almost uniformly. This left posterior *means* correct but inflated posterior *standard deviations* (~40% on a conjugate-Gaussian check: NUTS sd ≈ 0.31 vs analytic 0.224; now ≈ 0.224). Added `tests/nuts-posterior.test.js` pinning the recovered spread. The divergence check sign was corrected to `(H - H0) > deltaMax`.
 - **NUTS reported acceptance rate.** `acceptanceRate` now returns the mean Metropolis acceptance probability over the run (the statistic dual averaging targets via `targetAcceptance`), instead of the fraction of iterations whose average tree acceptance exceeded an arbitrary 0.5.
