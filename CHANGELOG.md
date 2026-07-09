@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-07-09
+
+### Fixed
+- Release workflow: pin npm 11 (npm 12.0.0 broke trusted publishing the day it became `latest`) and skip a version already on JSR so a half-succeeded release can be re-run. 0.6.1 reached JSR but not npm; 0.6.2 is the release both registries share.
+
 ## [0.6.1] - 2026-07-09
 
 ### Changed
