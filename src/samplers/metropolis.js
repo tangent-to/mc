@@ -58,6 +58,7 @@ export class MetropolisHastings {
    * @param {Object|number} [nSamples=1000] - Number of samples, or an options object
    * @param {number} [nSamples.nSamples=1000] - Number of samples (options-object form)
    * @param {number} [nSamples.burnIn=500] - Number of burn-in samples to discard (options-object form)
+   * @param {number} [nSamples.nWarmup] - Alias for `burnIn` (the name used by `sampleChains`); takes precedence when both are given (options-object form)
    * @param {number} [nSamples.thin=1] - Thinning interval, keep every nth sample (options-object form)
    * @param {number} [burnIn=500] - Number of burn-in samples to discard (positional form)
    * @param {number} [thin=1] - Thinning interval, keep every nth sample (positional form)
@@ -72,7 +73,10 @@ export class MetropolisHastings {
     let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
-      burnIn = o.burnIn ?? 500;
+      // Accept `nWarmup` (the name sampleChains/NUTS use) with `burnIn` kept as
+      // a back-compat alias, so a user's warmup count isn't silently dropped
+      // when they select sampler:'metropolis'.
+      burnIn = o.nWarmup ?? o.burnIn ?? 500;
       thin = o.thin ?? 1;
       verbose = o.verbose ?? false;
       nSamples = o.nSamples ?? 1000;

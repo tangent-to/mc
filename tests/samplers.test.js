@@ -178,12 +178,12 @@ describe('NUTS', () => {
 
     const sampler = new NUTS(0.01, 5);
     const H0 = sampler.hamiltonian({ x: 0 }, { x: 0 }, model);
-    const slice = Math.random() * Math.exp(-H0);
+    const logSlice = -H0 + Math.log(Math.random());
 
     const tree = sampler.buildTree(
       { x: 0 },
       { x: 0 },
-      slice,
+      logSlice,
       1,  // direction
       0,  // depth (base case)
       0.01,

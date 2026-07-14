@@ -5,6 +5,23 @@
  */
 
 /**
+ * Kinetic energy ½·pᵀp of a scalar-or-array momentum dict.
+ * @param {Object} momentum - Momentum values keyed by variable name
+ * @returns {number} Kinetic energy
+ */
+export function kineticEnergy(momentum) {
+  let ke = 0;
+  for (const p of Object.values(momentum)) {
+    if (Array.isArray(p)) {
+      for (let i = 0; i < p.length; i++) ke += 0.5 * p[i] * p[i];
+    } else {
+      ke += 0.5 * p * p;
+    }
+  }
+  return ke;
+}
+
+/**
  * Compute the Hamiltonian (total energy) H = -logProb(position) + ½·pᵀp.
  * @param {Model} model - The probabilistic model
  * @param {Object} position - Current position (parameters)
@@ -13,17 +30,7 @@
  */
 export function computeHamiltonian(model, position, momentum) {
   const logProb = model.logProb(position);
-
-  let kineticEnergy = 0;
-  for (const p of Object.values(momentum)) {
-    if (Array.isArray(p)) {
-      for (let i = 0; i < p.length; i++) kineticEnergy += 0.5 * p[i] * p[i];
-    } else {
-      kineticEnergy += 0.5 * p * p;
-    }
-  }
-
-  return -logProb + kineticEnergy;
+  return -logProb + kineticEnergy(momentum);
 }
 
 /**

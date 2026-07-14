@@ -1,6 +1,6 @@
 import { isOptions } from '../distributions/base.js';
 import { getRng } from '../rng.js';
-import { axpy, computeHamiltonian, dotValue, initTrace, recordSample, sampleMomentum } from './_shared.js';
+import { axpy, computeHamiltonian, dotValue, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -112,6 +112,53 @@ export class NUTS {
   }
 
   /**
+   * Single leapfrog step that REUSES the start gradient and computes the
+   * endpoint gradient and log-probability in one combined pass.
+   *
+   * The start-of-step gradient is the previous step's endpoint gradient, so
+   * threading it along the trajectory avoids recomputing `gradOf(position)`
+   * that the previous step already produced. The endpoint's potential value is
+   * needed for the Hamiltonian anyway, so `logProbAndGradient` fetches value and
+   * gradient together instead of a separate gradient pass plus a `logProb` pass.
+   *
+   * @param {Object} position - Current position (parameters)
+   * @param {Object} momentum - Current momentum
+   * @param {Object} startGrad - Gradient of the log-posterior at `position`
+   * @param {number} stepSize - Signed step size for this step
+   * @param {Model} model - The probabilistic model
+   * @returns {{position: Object, momentum: Object, grad: Object, logProb: number}}
+   *   New position/momentum, the endpoint gradient (to thread onward), and the
+   *   endpoint log-probability.
+   */
+  leapfrogStep(position, momentum, startGrad, stepSize, model) {
+    const variableNames = Object.keys(position);
+
+    // Half step for momentum using the (reused) start gradient
+    const pHalf = {};
+    for (const name of variableNames) {
+      pHalf[name] = axpy(momentum[name], stepSize / 2, startGrad[name]);
+    }
+
+    // Full step for position
+    const qNew = {};
+    for (const name of variableNames) {
+      qNew[name] = axpy(position[name], stepSize, pHalf[name]);
+    }
+
+    // One combined pass at the new position: value (for the Hamiltonian) and
+    // gradient (for the closing half step AND the next step's start gradient).
+    const { logProb, gradients } = model.logProbAndGradient(qNew);
+
+    // Half step for momentum
+    const pNew = {};
+    for (const name of variableNames) {
+      pNew[name] = axpy(pHalf[name], stepSize / 2, gradients[name]);
+    }
+
+    return { position: qNew, momentum: pNew, grad: gradients, logProb };
+  }
+
+  /**
    * Compute Hamiltonian (total energy)
    * @param {Object} position - Current position
    * @param {Object} momentum - Current momentum
@@ -150,31 +197,40 @@ export class NUTS {
    * Build tree recursively (doubling procedure)
    * @param {Object} position - Starting position
    * @param {Object} momentum - Starting momentum
-   * @param {number} slice - Slice variable for acceptance
+   * @param {number} logSlice - LOG slice variable log(u) for the membership test
+   *   (see {@link NUTS#sample}); a state is in the slice iff `logSlice ≤ -H`
    * @param {number} direction - Direction (+1 forward, -1 backward)
    * @param {number} depth - Current tree depth
    * @param {number} stepSize - Step size
    * @param {Model} model - The probabilistic model
    * @param {number} H0 - Initial Hamiltonian
-   * @returns {Object} Tree information
+   * @param {Object} [startGrad] - Gradient of the log-posterior at `position`
+   *   (the previous step's endpoint gradient). Computed on demand when omitted.
+   * @returns {Object} Tree information (also carries `gradMinus`/`gradPlus`, the
+   *   endpoint gradients, so the caller can thread them onward)
    */
-  buildTree(position, momentum, slice, direction, depth, stepSize, model, H0) {
+  buildTree(position, momentum, logSlice, direction, depth, stepSize, model, H0, startGrad) {
     const deltaMax = 1000; // Maximum energy change
 
     if (depth === 0) {
-      // Base case: single leapfrog step
-      const { position: positionNew, momentum: momentumNew } =
-        this.leapfrog(position, momentum, direction * stepSize, model);
+      // Base case: single leapfrog step. Reuse the start gradient (previous
+      // endpoint's) and fetch the endpoint's value+gradient in one pass.
+      const grad0 = startGrad ?? model.logProbAndGradient(position).gradients;
+      const { position: positionNew, momentum: momentumNew, grad: gradNew, logProb } =
+        this.leapfrogStep(position, momentum, grad0, direction * stepSize, model);
 
-      const H = this.hamiltonian(positionNew, momentumNew, model);
+      const H = -logProb + kineticEnergy(momentumNew);
 
-      // Slice-sampling membership (Hoffman & Gelman 2014, Alg. 3): the slice
-      // variable is u = slice ~ Uniform(0, e^{-H0}) (see sample()), and a state
-      // is in the slice iff u ≤ e^{-H(θ',r')}. Comparing to e^{H0-H} instead
-      // would be off by a factor e^{H0}; since H0 ∝ the data log-likelihood
-      // magnitude, that makes the test vacuously true and disables the energy
-      // weighting, inflating the posterior variance.
-      const valid = slice <= Math.exp(-H);
+      // Slice-sampling membership in LOG space (Hoffman & Gelman 2014, Alg. 3):
+      // the slice variable is u ~ Uniform(0, e^{-H0}), i.e. log(u) = -H0 +
+      // log(rng.float()) (see sample()), and a state is in the slice iff
+      // u ≤ e^{-H(θ',r')} ⇔ log(u) ≤ -H. Doing this comparison on the LINEAR
+      // quantities `u ≤ e^{-H}` under/overflows once |H| exceeds ~745 (the data
+      // log-likelihood magnitude): e^{-H} rounds to 0 or ∞, the test degenerates
+      // (every node counts, energy weighting and the !valid stop disable), and
+      // the opposite sign kills trajectories immediately. The log form stays
+      // finite for any H.
+      const valid = logSlice <= -H;
 
       // Metropolis acceptance ratio for dual-averaging adaptation.
       const expHDiff = Math.exp(H0 - H);
@@ -184,6 +240,8 @@ export class NUTS {
         positionPlus: positionNew,
         momentumMinus: momentumNew,
         momentumPlus: momentumNew,
+        gradMinus: gradNew,
+        gradPlus: gradNew,
         positionPrime: positionNew,
         nValid: valid ? 1 : 0,
         // Divergence: stop when the energy error blows up (H ≫ H0).
@@ -194,23 +252,27 @@ export class NUTS {
     }
 
     // Recursion: build left and right subtrees
-    const tree1 = this.buildTree(position, momentum, slice, direction, depth - 1, stepSize, model, H0);
+    const tree1 = this.buildTree(position, momentum, logSlice, direction, depth - 1, stepSize, model, H0, startGrad);
 
     if (tree1.stop) {
       return tree1;
     }
 
-    // Build second half of tree
+    // Build second half of tree, extending from tree1's outer endpoint and
+    // threading that endpoint's gradient as the next step's start gradient.
     const position2 = direction === 1 ? tree1.positionPlus : tree1.positionMinus;
     const momentum2 = direction === 1 ? tree1.momentumPlus : tree1.momentumMinus;
+    const grad2 = direction === 1 ? tree1.gradPlus : tree1.gradMinus;
 
-    const tree2 = this.buildTree(position2, momentum2, slice, direction, depth - 1, stepSize, model, H0);
+    const tree2 = this.buildTree(position2, momentum2, logSlice, direction, depth - 1, stepSize, model, H0, grad2);
 
     // Combine trees
     const positionMinus = direction === 1 ? tree1.positionMinus : tree2.positionMinus;
     const positionPlus = direction === 1 ? tree2.positionPlus : tree1.positionPlus;
     const momentumMinus = direction === 1 ? tree1.momentumMinus : tree2.momentumMinus;
     const momentumPlus = direction === 1 ? tree2.momentumPlus : tree1.momentumPlus;
+    const gradMinus = direction === 1 ? tree1.gradMinus : tree2.gradMinus;
+    const gradPlus = direction === 1 ? tree2.gradPlus : tree1.gradPlus;
 
     // Check for U-turn
     const uTurn = this.isUTurn(positionMinus, positionPlus, momentumMinus, momentumPlus);
@@ -227,6 +289,8 @@ export class NUTS {
       positionPlus,
       momentumMinus,
       momentumPlus,
+      gradMinus,
+      gradPlus,
       positionPrime,
       nValid: tree1.nValid + tree2.nValid,
       stop: tree1.stop || tree2.stop || uTurn,
@@ -297,17 +361,27 @@ export class NUTS {
         rng,
       );
 
-      // Compute current Hamiltonian
-      const H0 = this.hamiltonian(currentParams, momentum, model);
+      // Value and gradient at the current position, in one pass. The gradient
+      // seeds both trajectory endpoints (reused as each first step's start
+      // gradient); the value gives H0 without a separate logProb pass.
+      const { logProb: currentLogProb, gradients: currentGrad } =
+        model.logProbAndGradient(currentParams);
 
-      // Sample slice variable
-      const slice = rng.float() * Math.exp(-H0);
+      // Compute current Hamiltonian
+      const H0 = -currentLogProb + kineticEnergy(momentum);
+
+      // Sample the slice variable in LOG space: log(u) with u ~ Uniform(0,
+      // e^{-H0}). Kept as a log so the membership test never under/overflows
+      // for large |H| (see buildTree).
+      const logSlice = -H0 + Math.log(rng.float());
 
       // Initialize tree
       let positionMinus = { ...currentParams };
       let positionPlus = { ...currentParams };
       let momentumMinus = { ...momentum };
       let momentumPlus = { ...momentum };
+      let gradMinus = currentGrad;
+      let gradPlus = currentGrad;
       let proposedParams = { ...currentParams };
 
       let depth = 0;
@@ -325,18 +399,20 @@ export class NUTS {
         let tree;
         if (direction === 1) {
           tree = this.buildTree(
-            positionPlus, momentumPlus, slice, direction, depth,
-            this.stepSize, model, H0
+            positionPlus, momentumPlus, logSlice, direction, depth,
+            this.stepSize, model, H0, gradPlus
           );
           positionPlus = tree.positionPlus;
           momentumPlus = tree.momentumPlus;
+          gradPlus = tree.gradPlus;
         } else {
           tree = this.buildTree(
-            positionMinus, momentumMinus, slice, direction, depth,
-            this.stepSize, model, H0
+            positionMinus, momentumMinus, logSlice, direction, depth,
+            this.stepSize, model, H0, gradMinus
           );
           positionMinus = tree.positionMinus;
           momentumMinus = tree.momentumMinus;
+          gradMinus = tree.gradMinus;
         }
 
         // Sample from tree

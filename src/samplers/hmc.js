@@ -1,6 +1,6 @@
 import { isOptions } from '../distributions/base.js';
 import { getRng } from '../rng.js';
-import { axpy, computeHamiltonian, initTrace, recordSample, sampleMomentum } from './_shared.js';
+import { axpy, computeHamiltonian, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
 
 /**
  * Hamiltonian Monte Carlo (HMC) sampler
@@ -127,6 +127,7 @@ export class HamiltonianMC {
    * @param {Object|number} [nSamples=1000] - Number of samples, or an options object
    * @param {number} [nSamples.nSamples=1000] - Number of samples (options-object form)
    * @param {number} [nSamples.burnIn=500] - Number of burn-in samples to discard (options-object form)
+   * @param {number} [nSamples.nWarmup] - Alias for `burnIn` (the name used by `sampleChains`); takes precedence when both are given (options-object form)
    * @param {number} [nSamples.thin=1] - Thinning interval (options-object form)
    * @param {number} [burnIn=500] - Number of burn-in samples to discard (positional form)
    * @param {number} [thin=1] - Thinning interval (positional form)
@@ -141,7 +142,9 @@ export class HamiltonianMC {
     let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
-      burnIn = o.burnIn ?? 500;
+      // Accept `nWarmup` (the name sampleChains/NUTS use) with `burnIn` kept as
+      // a back-compat alias, so a user's warmup count isn't silently dropped.
+      burnIn = o.nWarmup ?? o.burnIn ?? 500;
       thin = o.thin ?? 1;
       verbose = o.verbose ?? false;
       nSamples = o.nSamples ?? 1000;
@@ -163,6 +166,13 @@ export class HamiltonianMC {
 
     const rng = getRng();
 
+    // Cache the current position's log-density: the potential energy only
+    // changes when a proposal is accepted, so recomputing model.logProb over
+    // the full data every iteration (as this.hamiltonian would) is wasted work.
+    // Only the kinetic term, which depends on the freshly drawn momentum, is
+    // recomputed each iteration.
+    let currentLogProb = model.logProb(currentParams);
+
     for (let i = 0; i < totalIterations; i++) {
       // Sample momentum (matched to each variable's shape)
       const momentum = sampleMomentum(
@@ -170,8 +180,8 @@ export class HamiltonianMC {
         rng,
       );
 
-      // Current Hamiltonian
-      const currentH = this.hamiltonian(currentParams, momentum, model);
+      // Current Hamiltonian, from the cached potential + this step's kinetic
+      const currentH = -currentLogProb + kineticEnergy(momentum);
 
       // Leapfrog integration
       const { position: proposedParams, momentum: proposedMomentum } = this.leapfrog(
@@ -180,8 +190,10 @@ export class HamiltonianMC {
         model
       );
 
-      // Proposed Hamiltonian
-      const proposedH = this.hamiltonian(proposedParams, proposedMomentum, model);
+      // Proposed Hamiltonian (this logProb pass is unavoidable, but reused on
+      // acceptance as the next iteration's cached current value)
+      const proposedLogProb = model.logProb(proposedParams);
+      const proposedH = -proposedLogProb + kineticEnergy(proposedMomentum);
 
       // Accept or reject
       const logAcceptanceRatio = currentH - proposedH;
@@ -190,6 +202,7 @@ export class HamiltonianMC {
       accepted.total++;
       if (rng.float() < acceptanceRatio) {
         currentParams = proposedParams;
+        currentLogProb = proposedLogProb;
         accepted.count++;
       }
 
