@@ -1,6 +1,6 @@
 {
   "name": "@tangent.to/mc",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "JavaScript Markov Chain Monte Carlo - A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript",
   "type": "module",
   "main": "./dist/index.js",
