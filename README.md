@@ -1,6 +1,6 @@
 # @tangent/mc - JavaScript Markov Chain Monte Carlo
 
-A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript. Built on TensorFlow.js with automatic differentiation support for efficient MCMC sampling.
+A PyMC-inspired probabilistic programming library for Bayesian inference in JavaScript. Runs on plain numbers and arrays, with exact gradients for the samplers that need them.
 
 ## Overview
 
@@ -17,7 +17,7 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 ### Key Features
 
 - **PyMC-like DAG structure**: Define models by connecting distributions in a directed acyclic graph
-- **TensorFlow.js integration**: Automatic differentiation for gradient-based samplers
+- **Exact gradients**: analytic log-density derivatives from [`@tangent.to/proba`](https://github.com/tangent-to/proba), and reverse-mode autodiff from [`@tangent.to/grad`](https://github.com/tangent-to/grad) for likelihoods you write yourself
 - **Multiple MCMC samplers**: Metropolis-Hastings, Hamiltonian Monte Carlo, and the No-U-Turn Sampler (NUTS)
 - **Rich distribution library**: Normal, Uniform, Beta, Gamma, Bernoulli, and more
 - **Posterior predictions**: Generate predictions with uncertainty from MCMC samples
@@ -32,15 +32,15 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 direct ESM import from a CDN - no install and no build step. It is also on npm and JSR
 for bundler and Node projects.
 
-It uses [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor
-math and automatic differentiation. `tfjs` is a **peer dependency**: it is not bundled,
-so it is loaded once and shared (mixing two copies breaks tensor interop). On a CDN the
-`+esm` endpoint resolves it for you; with a bundler you install it alongside `mc`.
+It runs on plain JavaScript numbers and arrays. There is no tensor library to load and
+no peer dependency to install: its only dependencies are two small suite leaves,
+[`@tangent.to/proba`](https://github.com/tangent-to/proba) for distributions and
+[`@tangent.to/grad`](https://github.com/tangent-to/grad) for autodiff, both resolved
+for you on a CDN and by any bundler.
 
 ### Browser / CDN (no build step)
 
-jsDelivr's `+esm` endpoint auto-resolves `tfjs`, so a single import works in a plain
-`<script type="module">` - nothing else to load:
+A single import works in a plain `<script type="module">` - nothing else to load:
 
 ```html
 <script type="module">
@@ -68,22 +68,14 @@ import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
 ### Node.js / npm / bundlers
 
-For a bundler (Vite, webpack, esbuild, …) or a Node project, install `mc` with the
-`tfjs` peer dependency alongside it:
+For a bundler (Vite, webpack, esbuild, …) or a Node project:
 
 ```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+npm install @tangent.to/mc
 ```
 
 ```javascript
 import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
-```
-
-The bundler resolves the peer dependency for you. `mc` also re-exports the shared `tf`
-instance, so you can grab it from `mc` itself instead of importing it separately:
-
-```javascript
-import { tf } from '@tangent.to/mc';
 ```
 
 ## Quick Start
@@ -91,12 +83,11 @@ import { tf } from '@tangent.to/mc';
 Here's a simple Bayesian linear regression example:
 
 ```javascript
-import { Model, Normal, Uniform, MetropolisHastings, printSummary, tf } from '@tangent.to/mc';
+import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
 
-// Example data
+// Example data - plain arrays, no tensors
 const x = [1, 2, 3, 4, 5];
 const y = [2.1, 3.9, 6.2, 7.8, 10.1];
-const xT = tf.tensor1d(x), yT = tf.tensor1d(y);
 
 // Create the model and its priors (options-object form; positional also works).
 const model = new Model({ name: 'linear_regression' });
@@ -106,10 +97,13 @@ model.addVariable('sigma', new Uniform({ min: 0.01, max: 5 }));
 
 // Likelihood as a POTENTIAL. The priors above are summed into the joint
 // automatically; `potential(name, fn)` adds the data term, with the deterministic
-// mean built from the latent parameters. Work in tensors so the gradient-based
-// samplers (HMC / NUTS) can differentiate through it, and so the term is vectorized.
+// mean built from the latent parameters. Distributions broadcast over arrays, so
+// this is one vectorized call, not a loop.
 model.potential('y', (p) =>
-  new Normal(tf.add(tf.mul(p.beta, xT), p.alpha), p.sigma).logProb(yT));
+  new Normal(x.map((xi) => p.beta * xi + p.alpha), p.sigma).logProb(y));
+
+// For a gradient-based sampler, write the same term with `autoPotential` instead
+// and it is differentiated exactly - see "Gradients" below.
 
 // (Optional) record a post-hoc transform of the draws into the trace:
 // model.deterministic('mu_at_x3', (p) => p.alpha + p.beta * 3);
@@ -145,29 +139,32 @@ Dependencies between variables (hierarchies, transformed parameters) are express
 passing one distribution object as another distribution's parameter:
 
 ```javascript
-import { Model, Normal, tf } from '@tangent.to/mc';
+import { Model, Normal, HalfNormal } from '@tangent.to/mc';
 
 const model = new Model('hierarchical');
-model.addVariable('mu_global', new Normal(0, 10));
-model.addVariable('log_sigma_global', new Normal(0, 1)); // unconstrained - see below
-model.addVariable('z', new Normal(0, 1));                // non-centred group offset
+model.addVariable('mu_global',    new Normal(0, 10));
+model.addVariable('sigma_global', new HalfNormal(1));  // a scale, sampled transformed
+model.addVariable('z',            new Normal(0, 1));   // non-centred group offset
 
 // The group mean depends on the hyperparameters - built in the potential:
 model.potential('y', (p) => {
-  const sigmaGlobal = tf.exp(p.log_sigma_global);
-  const muGroup = tf.add(p.mu_global, tf.mul(sigmaGlobal, p.z));
-  return new Normal(muGroup, sigmaObs).logProb(yT);
+  const muGroup = p.z.map((zi) => p.mu_global + p.sigma_global * zi);
+  return new Normal(muGroup, sigmaObs).logProb(y);
 });
 ```
 
-> **Sampler constraint (important).** The gradient samplers (`HMC`, `NUTS`) treat
-> every free variable as an unconstrained **scalar** and apply **no support
-> transforms**. A constrained prior (Beta, HalfNormal, Uniform, Lognormal) can wander
-> off its support and produce `NaN` gradients. The robust pattern is to declare
-> **unconstrained** latents - e.g. a `Normal` prior on `log_sigma` or `logit_p` - 
-> and apply `tf.exp` / `tf.sigmoid` **inside** the `potential`, which is equivalent
-> to a Lognormal / Beta prior on the natural parameter. (Metropolis-Hastings has no
-> such restriction - it rejects out-of-support proposals via the `-Infinity` logProb.)
+> **Constrained parameters.** Since 0.9.0, `NUTS` samples a bounded variable in an
+> unconstrained parameterization and applies the log-Jacobian correction, as Stan and
+> PyMC do — so a `HalfNormal` scale or a `Beta` probability is stepped through `ℝ` and
+> can never be proposed outside its support. Declare the natural parameter and let the
+> sampler transform it.
+>
+> Before 0.9.0 this was the user's job: the advice was to declare an unconstrained
+> latent (`Normal` on `log_sigma`) and exponentiate inside the potential. That still
+> works and remains a good idea for a hierarchical scale, where the non-centred form
+> helps the geometry regardless. `HMC` and the vector `HMC` do not yet go through the
+> transform; `MetropolisHastings` never needed it, rejecting out-of-support proposals
+> through their `-Infinity` log-density.
 
 ### Distributions
 
@@ -438,7 +435,7 @@ class NUTS {
 ## Browser & ObservableHQ
 
 `mc` is a single browser-first build that runs the same in the browser, Node, and
-ObservableHQ - see [Installation](#installation) for loading `tfjs`. In Observable:
+ObservableHQ. In Observable:
 
 ```javascript
 mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
@@ -450,28 +447,56 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 ```
 
 **Notes for browser/Observable use**:
-- `tfjs` runs on its CPU/WebGL backend (there is no `@tensorflow/tfjs-node` - the
-  single build uses `@tensorflow/tfjs` everywhere), which enables interactive
-  visualization.
+- Everything runs on plain numbers, so there is no backend to select and no
+  environment-specific build - the same bundle serves Node, the browser and Deno.
 - File-based persistence (`saveTrace`, `loadTrace`) is Node-only (`node:fs`) and is
   not part of the browser entry. Import it from the `@tangent.to/mc/persistence`
   subpath in Node if needed; in the browser, serialize with `traceToJSON(trace)`.
 
 ## Technical Details
 
-### Built on TensorFlow.js
+### Gradients
 
-mc leverages TensorFlow.js for:
-- **Automatic differentiation**: Essential for gradient-based samplers like HMC/NUTS
-- **Efficient tensor operations**: Fast computation of log probabilities
-- **WebGL acceleration**: GPU-backed tensor math in the browser via the WebGL backend
+HMC and NUTS need the gradient of the joint log-probability. mc gets it from three
+places, in descending order of preference:
+
+- **Priors** are differentiated analytically, from `@tangent.to/proba`'s `dlogpdf`.
+- **Potentials written with `autoPotential`** are differentiated exactly by
+  [`@tangent.to/grad`](https://github.com/tangent-to/grad), reverse-mode, with no
+  derivation by hand:
+
+  ```javascript
+  import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
+
+  model.autoPotential('y', (v) => {
+    const z = div(sub(yData, add(mul(v.beta, xData), v.alpha)), v.sigma);
+    return sub(mul(-0.5, sum(square(z))), mul(yData.length, log(v.sigma)));
+  });
+  ```
+
+- **Potentials written with `potential`** fall back to central finite differences,
+  which cost 2·(#params) extra evaluations of the whole term per gradient and are
+  accurate only to ~1e-7 - enough error to cost the leapfrog integrator its
+  symplectic property. Pass an explicit `gradFn` if you have one, or prefer
+  `autoPotential`.
+
+Constrained parameters (a scale in `(0, ∞)`, a probability in `(0, 1)`) are sampled
+in an unconstrained parameterization with the log-Jacobian correction applied, as Stan
+and PyMC do, so the sampler never proposes a value outside the support.
+
+### Not built on TensorFlow.js
+
+Until 0.5.0 mc ran on `@tensorflow/tfjs` and took it as a peer dependency. It no
+longer does: the numerics are plain numbers and arrays. If you are following older
+material, there is no `tf` export, no peer dependency to install, and no backend to
+select.
 
 ### Comparison with PyMC
 
 | Feature | PyMC | mc |
 |---------|------|------|
 | Language | Python | JavaScript |
-| Backend | Aesara/JAX | TensorFlow.js |
+| Backend | PyTensor | plain arrays + @tangent.to/grad |
 | DAG Structure | Yes | Yes |
 | MCMC Samplers | NUTS, HMC, MH | NUTS, HMC, MH |
 | Variational Inference | Yes | Planned |
@@ -515,7 +540,8 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## License
 
-Apache-2.0
+GPL-3.0 (application layer of the tangent suite; the numeric leaves it
+builds on are MIT).
 
 ## Roadmap
 
@@ -545,7 +571,8 @@ Apache-2.0
 ## References
 
 - [PyMC Documentation](https://www.pymc.io/)
-- [TensorFlow.js](https://www.tensorflow.org/js)
+- [Stan Reference Manual](https://mc-stan.org/docs/reference-manual/) - the
+  constrained-parameter transforms and NUTS follow it
 - [Bayesian Data Analysis (Gelman et al.)](http://www.stat.columbia.edu/~gelman/book/)
 - [MCMC sampling for dummies](https://twiecki.io/blog/2015/11/10/mcmc-sampling-for-dummies/)
 

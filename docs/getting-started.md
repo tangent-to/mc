@@ -24,15 +24,14 @@ linear regression from priors to posterior summary.
 direct ESM import from a CDN - no install and no build step. It is also published to
 npm and JSR for bundler and Node projects.
 
-It uses [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor
-math and automatic differentiation. `tfjs` is a **peer dependency**: it is not bundled,
-so it is loaded once and shared (mixing two copies breaks tensor interop). On a CDN the
-`+esm` endpoint resolves it for you; with a bundler you install it alongside `mc`.
+It runs on plain JavaScript numbers and arrays. Its only dependencies are two small
+suite leaves — [proba](https://github.com/tangent-to/proba) for distributions and
+[grad](https://github.com/tangent-to/grad) for autodiff — and both are resolved for you
+on a CDN and by any bundler. There is no peer dependency to install.
 
 ### Browser / CDN (no build step)
 
-jsDelivr's `+esm` endpoint auto-resolves `tfjs`, so a single import works in a plain
-`<script type="module">` - nothing else to load:
+A single import works in a plain `<script type="module">` - nothing else to load:
 
 ```html
 <script type="module">
@@ -60,23 +59,14 @@ import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
 ### Node.js / npm / bundlers
 
-For a bundler (Vite, webpack, esbuild, …) or a Node project, install `mc` with the
-`tfjs` peer dependency alongside it:
+For a bundler (Vite, webpack, esbuild, …) or a Node project:
 
 ```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+npm install @tangent.to/mc
 ```
 
 ```javascript
 import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
-```
-
-The bundler resolves the peer dependency for you - nothing else to do. `mc` also
-re-exports the shared `tf` instance, so you can build tensors with the exact copy the
-library uses:
-
-```javascript
-import { tf } from '@tangent.to/mc';
 ```
 
 ## Import styles
@@ -124,16 +114,24 @@ model.addVariable('alpha', new Normal({ mean: 0, sd: 10, name: 'alpha' }));
 model.addVariable('beta',  new Normal({ mean: 0, sd: 10, name: 'beta' }));
 model.addVariable('sigma', new HalfNormal(5, 'sigma'));
 
-// Likelihood: y ~ Normal(alpha + beta * x, sigma)
-model.potential('y', (p) => {
-  const xt = tf.tensor1d(x);
-  const mu = tf.add(tf.mul(p.beta, xt), p.alpha);
-  return new Normal(mu, p.sigma).logProb(tf.tensor1d(y));
-});
+// Likelihood: y ~ Normal(alpha + beta * x, sigma).
+// Distributions broadcast over arrays, so this is one vectorized call.
+model.potential('y', (p) =>
+  new Normal(x.map((xi) => p.alpha + p.beta * xi), p.sigma).logProb(y));
 ```
 
-Here `tf` is the shared TensorFlow.js instance - import it with
-`import { tf } from '@tangent.to/mc'`.
+`potential` gets its gradient by central finite differences, which is fine for a
+three-parameter model. For anything larger, write the same term with `autoPotential`
+and [grad](https://github.com/tangent-to/grad) differentiates it exactly:
+
+```javascript
+import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
+
+model.autoPotential('y', (p) => {
+  const z = div(sub(y, add(mul(p.beta, x), p.alpha)), p.sigma);
+  return sub(mul(-0.5, sum(square(z))), mul(y.length, log(p.sigma)));
+});
+```
 
 ### 3. Sample the posterior
 

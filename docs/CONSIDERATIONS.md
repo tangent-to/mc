@@ -4,31 +4,43 @@ This document covers important considerations, best practices, limitations, and 
 
 ## Architecture & Design Decisions
 
-### Why TensorFlow.js?
+### Why plain numbers and arrays?
 
-mc uses TensorFlow.js as its computational backend for several key reasons:
+mc ran on TensorFlow.js until 0.5.0, for the reasons you would expect: it supplied
+automatic differentiation, vectorized tensor math, and a mature ecosystem. That
+decision was reversed, and the reversal is worth recording because the original
+reasoning looked sound.
 
-1. **Automatic Differentiation**: Essential for gradient-based samplers like HMC and NUTS
-2. **Tensor Operations**: Efficient vectorized math for likelihoods and samplers
-3. **Mature Ecosystem**: Well-tested, widely adopted library
+What it cost:
 
-TensorFlow.js (`@tensorflow/tfjs`) is a peer dependency, not bundled. mc ships a single browser-first build that runs on the tfjs CPU/WebGL backend everywhere.
+- **A peer dependency users had to install and keep singular.** Two copies of tfjs in
+  one page break tensor interop, which is a failure mode nobody enjoys diagnosing.
+- **A backend to select**, and browser-only GPU acceleration that mattered far less
+  than expected: MCMC is dominated by long sequential chains, not by wide tensor
+  kernels. A chain is a Markov chain — it cannot be parallelized in time.
+- **Manual memory management.** Every model author had to think about `tf.tidy()`.
+- **Weight.** A probabilistic programming library that pulls in a deep-learning
+  runtime is hard to justify in a notebook.
 
-### Why Not Pure JavaScript?
+What replaced each piece:
 
-While pure JavaScript would have fewer dependencies, it would require:
-- Manual gradient computation (error-prone and slow)
-- Custom linear algebra implementations
-- Significantly more development time
+- **Vectorized math** → distributions broadcast over plain arrays, via
+  [proba](https://github.com/tangent-to/proba). At MCMC sizes the tensor overhead
+  exceeded the gain.
+- **Automatic differentiation** → priors carry analytic `dlogpdf` gradients, and
+  likelihoods you write yourself are differentiated by
+  [grad](https://github.com/tangent-to/grad), a reverse-mode tape built for this
+  suite (0.9.0). Exact, and one likelihood evaluation per gradient.
 
-The trade-off is worth it for the performance and reliability TensorFlow.js provides.
+The parallelism that does help is across CHAINS, which `sampleChains` runs one per
+worker — no tensor backend required.
 
 ### PyMC Comparison
 
 | Feature | PyMC | mc | Notes |
 |---------|------|------|-------|
 | Language | Python | JavaScript | mc brings Bayesian inference to JS ecosystem |
-| Backend | Aesara/JAX | TensorFlow.js | Both support autodiff |
+| Backend | PyTensor | plain arrays + @tangent.to/grad | Both support autodiff |
 | DAG Structure | Yes | Yes | Core feature for both |
 | MCMC Samplers | NUTS, HMC, MH, etc. | HMC, MH | mc has fewer samplers currently |
 | Variational Inference | Yes | Planned | Major feature gap |
@@ -51,28 +63,24 @@ Typical performance on a modern CPU:
 1. **Use HMC for high-dimensional problems**: More efficient than MH
 2. **Batch operations**: Process multiple chains in parallel if needed
 3. **Reduce model complexity**: Simplify likelihood functions
-4. **Use the WebGL backend**: Faster than CPU for larger tensor ops
+4. **Give the sampler exact gradients**: an `autoPotential` costs one likelihood
+   evaluation per gradient where `potential` costs 2·(#params)
 5. **Tune sampler parameters**: Proper step size and proposal std make a huge difference
 
-### Memory Management
+### Memory
 
-TensorFlow.js requires explicit memory management:
+Nothing to manage explicitly. Computation is on plain numbers and arrays, so ordinary
+garbage collection applies — there are no tensors to dispose.
+
+A long run's memory is dominated by the trace: one number per draw per scalar
+parameter, plus the vector parameters. Thin the chain if you need a very long one:
 
 ```javascript
-// Good: Use tf.tidy() for automatic cleanup
-const result = tf.tidy(() => {
-  const x = tf.tensor([1, 2, 3]);
-  const y = tf.square(x);
-  return y.arraySync(); // Extract value before cleanup
-});
-
-// Bad: Memory leak
-const x = tf.tensor([1, 2, 3]);
-const y = tf.square(x);
-// x and y are never disposed!
+sampler.sample(model, init, { nSamples: 100000, thin: 10 });
 ```
 
-mc handles this internally for most operations, but be careful with custom likelihood functions.
+Running several chains multiplies that, so `sampleChains` is where a long run's memory
+actually goes.
 
 ## Limitations & Known Issues
 
@@ -210,7 +218,7 @@ mc may not be the best choice if you need:
 
 1. **Production-scale inference**: Use PyMC, Stan, or JAX
 2. **Real-time inference**: MCMC is too slow
-3. **Deep learning integration**: Use PyTorch/TensorFlow directly
+3. **Deep learning integration**: Use PyTorch or JAX directly
 4. **Complex time series**: Specialized libraries (Prophet, statsmodels) are better
 5. **Massive datasets**: mc doesn't scale beyond ~10k observations
 
@@ -218,6 +226,7 @@ mc may not be the best choice if you need:
 - **PyMC**: Most feature-complete Bayesian library (Python)
 - **Stan**: Fast, robust, production-ready (C++/R/Python)
 - **TensorFlow Probability**: Deep learning + Bayesian (Python/JS)
+- **NumPyro**: Fast, JAX-backed (Python)
 - **Turing.jl**: Fast, flexible (Julia)
 
 ## Security Considerations
@@ -275,7 +284,8 @@ In Observable or other browser environments:
 
 ## License
 
-mc is licensed under Apache-2.0, same as TensorFlow.
+mc is licensed under GPL-3.0, as the application layer of the tangent suite. The
+numeric leaves it builds on (proba, grad) are MIT.
 
 ## Citation
 

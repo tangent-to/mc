@@ -7,12 +7,8 @@ nav_order: 5
 # Examples
 {: .no_toc }
 
-Three complete models, each defined, sampled, and summarized with the real API. They
-all assume the shared TensorFlow.js instance is in scope:
-
-```javascript
-import { tf } from '@tangent.to/mc';
-```
+Three complete models, each defined, sampled, and summarized with the real API, on
+plain JavaScript arrays.
 
 ## Table of contents
 {: .no_toc .text-delta }
@@ -39,10 +35,10 @@ model.addVariable('alpha', new Normal({ mean: 0, sd: 10, name: 'alpha' }));
 model.addVariable('beta',  new Normal({ mean: 0, sd: 10, name: 'beta' }));
 model.addVariable('sigma', new HalfNormal(5, 'sigma'));
 
-model.potential('y', (p) => {
-  const mu = tf.add(tf.mul(p.beta, tf.tensor1d(x)), p.alpha);
-  return new Normal(mu, p.sigma).logProb(tf.tensor1d(y));
-});
+// Distributions broadcast over arrays, so the mean is one map and the
+// log-density is one call.
+model.potential('y', (p) =>
+  new Normal(x.map((xi) => p.alpha + p.beta * xi), p.sigma).logProb(y));
 
 const result = new HMC({ stepSize: 0.01, nSteps: 20 })
   .sample(model, { alpha: 0, beta: 0, sigma: 1 }, { nSamples: 1000, nWarmup: 500 });
@@ -80,16 +76,11 @@ const model = new Model('logistic_regression');
 model.addVariable('alpha', new Normal({ mean: 0, sd: 5, name: 'alpha' }));
 model.addVariable('beta',  new Normal({ mean: 0, sd: 5, name: 'beta' }));
 
-// y ~ Bernoulli(sigmoid(alpha + beta * x)), as a Bernoulli logProb tensor.
+// y ~ Bernoulli(sigmoid(alpha + beta * x)).
 model.potential('y', (p) => {
-  const logits = tf.add(tf.mul(p.beta, tf.tensor1d(x)), p.alpha);
-  const prob = tf.sigmoid(logits);
-  const yt = tf.tensor1d(y);
+  const prob = x.map((xi) => 1 / (1 + Math.exp(-(p.alpha + p.beta * xi))));
   // log p = y*log(prob) + (1 - y)*log(1 - prob)
-  return tf.add(
-    tf.mul(yt, tf.log(prob)),
-    tf.mul(tf.sub(1, yt), tf.log(tf.sub(1, prob)))
-  );
+  return y.map((yi, i) => yi * Math.log(prob[i]) + (1 - yi) * Math.log(1 - prob[i]));
 });
 
 const result = new HMC({ stepSize: 0.05, nSteps: 20 })
@@ -127,17 +118,14 @@ model.addVariable('sigmaPop', new HalfNormal(5, 'sigmaPop'));
 model.addVariable('theta',    new Normal({ mean: 5, sd: 10, name: 'theta' }));
 
 // Group-level prior: theta[g] ~ Normal(muPop, sigmaPop)
-model.potential('group_prior', (p) => {
-  const theta = Array.isArray(p.theta) ? tf.tensor1d(p.theta) : p.theta;
-  return new Normal(p.muPop, p.sigmaPop).logProb(theta);
-});
+model.potential('group_prior', (p) =>
+  new Normal(p.muPop, p.sigmaPop).logProb(p.theta));
 
 // Likelihood: obs in group g ~ Normal(theta[g], 1)
 model.potential('y', (p) => {
-  const theta = Array.isArray(p.theta) ? p.theta : p.theta.arraySync();
-  let lp = tf.scalar(0);
+  let lp = 0;
   for (const g of groups) {
-    lp = tf.add(lp, tf.sum(new Normal(theta[g.id], 1).logProb(tf.tensor1d(g.obs))));
+    for (const v of new Normal(p.theta[g.id], 1).logProb(g.obs)) lp += v;
   }
   return lp;
 });

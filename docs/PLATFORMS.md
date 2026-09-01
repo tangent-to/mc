@@ -62,7 +62,7 @@ Plot.plot({
 
 ### Observable Tips
 
-1. **Memory Management**: TensorFlow.js runs in browser, be mindful of memory
+1. **Memory**: nothing to dispose — computation is on plain arrays — but a long trace still holds one number per draw per parameter, so thin it if a tab must keep one
 2. **Sample Counts**: Use fewer samples than in Node.js (500-1000 vs 5000)
 3. **Reactivity**: Cache expensive MCMC runs in separate cells
 4. **Visualization**: Use Observable Plot for trace plots and posteriors
@@ -129,12 +129,12 @@ console.log('beta:', trace.trace.beta.reduce((a,b) => a+b) / trace.trace.beta.le
 **Works out of the box**:
 - All mc functionality
 - npm imports via `npm:` specifier
-- TensorFlow.js support
+- JSR imports via `jsr:@tangent/mc`
 - TypeScript types (if provided)
 
 **Considerations**:
 - Use `npm:@tangent.to/mc` not `./src/index.js` (no local imports without deno.json)
-- TensorFlow.js: `@tensorflow/tfjs` is a peer dependency, resolved automatically via the `npm:` specifier; mc re-exports the shared instance as `tf`
+- No peer dependency to resolve: mc's only dependencies are `@tangent.to/proba` and `@tangent.to/grad`, both pulled in automatically
 - Performance: Similar to Node.js for most operations
 - File I/O: Use Deno's built-in APIs, not Node.js `fs`
 
@@ -206,7 +206,7 @@ ijsinstall
 
 2. Install mc:
 ```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+npm install @tangent.to/mc
 ```
 
 3. Start Jupyter:
@@ -385,7 +385,7 @@ import { ... } from "npm:@tangent.to/mc";
 
 ### Node.js/Jupyter
 ```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+npm install @tangent.to/mc
 ```
 ```javascript
 import { ... } from '@tangent.to/mc';

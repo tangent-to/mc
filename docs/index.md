@@ -2,7 +2,7 @@
 layout: home
 title: Home
 nav_order: 1
-description: "A PyMC-inspired Markov Chain Monte Carlo library for Bayesian inference in JavaScript, built on TensorFlow.js."
+description: "A PyMC-inspired Markov Chain Monte Carlo library for Bayesian inference in JavaScript, running on plain numbers and arrays."
 permalink: /
 ---
 
@@ -21,8 +21,9 @@ directed acyclic graphs and fit them with Markov Chain Monte Carlo.
 `@tangent.to/mc` brings PyMC-style Bayesian modelling to JavaScript. You describe a
 model by declaring prior distributions and a likelihood, then draw posterior samples
 with one of several MCMC samplers - all running the same in Node.js, the browser,
-Deno, and Observable. It is built on [TensorFlow.js](https://www.tensorflow.org/js)
-for tensor math and automatic differentiation (used by the gradient-based samplers).
+Deno, and Observable. It runs on plain numbers and arrays, with analytic prior
+gradients from [proba](https://github.com/tangent-to/proba) and reverse-mode autodiff
+from [grad](https://github.com/tangent-to/grad) for the gradient-based samplers.
 
 ## Quick example
 
@@ -59,7 +60,7 @@ printSummary(trace);
 - **Visualization specs** - trace, posterior, autocorrelation, pair, forest, and
   rank plots ready for Observable Plot.
 - **Runs everywhere** - a single browser-first build for Node.js, the browser, Deno,
-  and Observable, with `@tensorflow/tfjs` as a shared peer dependency.
+  and Observable. No tensor library, no peer dependency, no backend to select.
 
 ## Where to next
 
