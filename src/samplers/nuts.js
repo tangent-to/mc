@@ -1,6 +1,7 @@
 import { isOptions } from '../distributions/base.js';
 import { getRng } from '../rng.js';
 import { axpy, computeHamiltonian, dotValue, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
+import { unconstrainedView } from '../transforms.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -333,7 +334,18 @@ export class NUTS {
    * @example
    * nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
    */
-  sample(model, initialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
+  sample(userModel, userInitialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
+    // Move through the UNCONSTRAINED parameterization. A scale in (0, ∞) or a
+    // probability in (0, 1) has no business being stepped through directly:
+    // leapfrog walks it past its boundary, where the density is -Infinity and
+    // the gradient is meaningless. Rejecting those proposals wastes the
+    // trajectory and drags step-size adaptation down near the boundary. Stan
+    // and PyMC both sample transformed; so does this now. The view is the
+    // model itself when nothing is bounded, so unconstrained models are
+    // untouched.
+    const model = unconstrainedView(userModel);
+    const transformed = model !== userModel;
+    const initialValues = transformed ? model.toUnconstrained(userInitialValues) : userInitialValues;
     let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
@@ -471,7 +483,11 @@ export class NUTS {
 
       // Store samples after warmup and according to thinning
       if (i >= nWarmup && (i - nWarmup) % thin === 0) {
-        recordSample(trace, currentParams, variableNames);
+        recordSample(
+          trace,
+          transformed ? model.toConstrained(currentParams) : currentParams,
+          variableNames,
+        );
       }
 
       // Progress logging

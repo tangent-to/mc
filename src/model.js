@@ -24,6 +24,7 @@
  */
 
 import { valueAndGradFns } from '@tangent.to/grad';
+import { makeTransform, supportOf } from './transforms.js';
 
 /** Sum a number or an array of numbers. */
 function sumOf(v) {
@@ -174,6 +175,7 @@ export class Model {
    */
   addVariable(name, distribution, observed = null) {
     this.variables.set(name, distribution);
+    this._transformCache = null;
 
     if (observed !== null) {
       distribution.observe(observed);
@@ -294,6 +296,125 @@ export class Model {
     }
 
     return gradients;
+  }
+
+  /**
+   * The transform for each free variable, built from its prior's support and
+   * cached. Rebuilt when a variable is added.
+   * @private
+   */
+  _transforms() {
+    if (this._transformCache && this._transformCache.size === this.variables.size) {
+      return this._transformCache;
+    }
+    const map = new Map();
+    for (const [name, dist] of this.variables.entries()) {
+      map.set(name, makeTransform(supportOf(dist)));
+    }
+    this._transformCache = map;
+    return map;
+  }
+
+  /**
+   * Does any free variable have a bounded support?
+   *
+   * When nothing is constrained the unconstrained space IS the constrained one
+   * and every transform is the identity, so a sampler can skip the mapping
+   * entirely and behave exactly as it did before this existed.
+   *
+   * @returns {boolean}
+   */
+  hasConstrainedVariables() {
+    for (const [name, T] of this._transforms()) {
+      if (!T.isIdentity && this.observedVars.get(name) === undefined) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Map constrained parameter values into the unconstrained space a gradient
+   * sampler should move through.
+   *
+   * @param {Object} params - `{name: number|Array}` in the model's own units
+   * @returns {Object} the same shape, unconstrained
+   */
+  toUnconstrained(params) {
+    const T = this._transforms();
+    const out = {};
+    for (const [name, value] of Object.entries(params)) {
+      const t = T.get(name);
+      if (!t || t.isIdentity) { out[name] = value; continue; }
+      out[name] = Array.isArray(value) ? value.map(t.toUnconstrained) : t.toUnconstrained(value);
+    }
+    return out;
+  }
+
+  /**
+   * Map unconstrained values back into the model's units.
+   *
+   * @param {Object} uparams - `{name: number|Array}`, unconstrained
+   * @returns {Object} the same shape, constrained
+   */
+  toConstrained(uparams) {
+    const T = this._transforms();
+    const out = {};
+    for (const [name, value] of Object.entries(uparams)) {
+      const t = T.get(name);
+      if (!t || t.isIdentity) { out[name] = value; continue; }
+      out[name] = Array.isArray(value) ? value.map(t.toConstrained) : t.toConstrained(value);
+    }
+    return out;
+  }
+
+  /**
+   * Joint log-probability and gradient in UNCONSTRAINED space.
+   *
+   * The change of variables adds Σ log|dx/du| to the log-density, which is
+   * what keeps the posterior invariant: without it the sampler would explore
+   * the transformed density, not the one you wrote. The gradient is chained
+   * through the same derivative, plus the d/du of that Jacobian term.
+   *
+   * For a lower-bounded parameter x = a + eᵘ the Jacobian term is just u, so
+   * its derivative is 1 — the "+1" below. For a doubly-bounded one it is
+   * 1 − 2σ(u).
+   *
+   * @param {Object} uparams - `{name: number|Array}`, unconstrained
+   * @returns {{logProb: number, gradients: Object}} both in unconstrained terms
+   */
+  logProbAndGradientUnconstrained(uparams) {
+    const T = this._transforms();
+    const params = this.toConstrained(uparams);
+    const { logProb, gradients } = this.logProbAndGradient(params);
+
+    let logJacobian = 0;
+    const out = {};
+    for (const [name, uvalue] of Object.entries(uparams)) {
+      const t = T.get(name);
+      const g = gradients[name];
+      if (!t || t.isIdentity) { out[name] = g; continue; }
+      if (Array.isArray(uvalue)) {
+        const acc = new Array(uvalue.length);
+        for (let i = 0; i < uvalue.length; i++) {
+          logJacobian += t.logDetJacobian(uvalue[i]);
+          acc[i] = (Array.isArray(g) ? g[i] : (g ?? 0)) * t.dxdu(uvalue[i])
+            + t.dLogDetJacobian(uvalue[i]);
+        }
+        out[name] = acc;
+      } else {
+        logJacobian += t.logDetJacobian(uvalue);
+        out[name] = (g ?? 0) * t.dxdu(uvalue) + t.dLogDetJacobian(uvalue);
+      }
+    }
+    return { logProb: logProb + logJacobian, gradients: out };
+  }
+
+  /**
+   * Gradient only, in unconstrained space — the leapfrog hot path.
+   * @param {Object} uparams
+   * @returns {Object} `{name: number|Array}`
+   */
+  gradientsOnlyUnconstrained(uparams) {
+    return this.logProbAndGradientUnconstrained(uparams).gradients;
   }
 
   /**
