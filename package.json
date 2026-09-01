@@ -77,6 +77,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@tangent.to/grad": "^0.1.0",
     "@tangent.to/proba": "^0.1.0"
   }
 }

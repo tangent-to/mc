@@ -232,8 +232,18 @@ export class NUTS {
       // finite for any H.
       const valid = logSlice <= -H;
 
-      // Metropolis acceptance ratio for dual-averaging adaptation.
+      // Metropolis acceptance ratio for dual-averaging adaptation. A
+      // non-finite H means the step left the support (log of a negative scale,
+      // say), and e^{H0-H} is then NaN. That NaN must NOT reach the adaptation:
+      // it poisons hBar, hence logStepSize, hence stepSize = exp(NaN) = NaN
+      // permanently — after which every leapfrog produces NaN positions, every
+      // tree stops, the proposal is never accepted, and the chain silently
+      // freezes for the rest of the run with acceptanceRate = NaN as the only
+      // symptom. A divergent step has acceptance probability 0, which is both
+      // correct and what dual averaging needs to see in order to shrink the
+      // step size and recover.
       const expHDiff = Math.exp(H0 - H);
+      const alpha = Number.isFinite(expHDiff) ? Math.min(1, expHDiff) : 0;
 
       return {
         positionMinus: positionNew,
@@ -246,7 +256,7 @@ export class NUTS {
         nValid: valid ? 1 : 0,
         // Divergence: stop when the energy error blows up (H ≫ H0).
         stop: !valid || (H - H0) > deltaMax,
-        alpha: Math.min(1, expHDiff),
+        alpha,
         nAlpha: 1
       };
     }
