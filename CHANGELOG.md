@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **NUTS counts divergent transitions.** `sample()` returns `divergences`
+  (after warmup, the count to act on) and `divergencesWarmup`, and warns once
+  when the former is positive; a multi-chain run aggregates and warns once
+  over all chains, with the per-chain counts in `fit.divergences`. The
+  diagnostic R-hat and ESS cannot give: a chain that diverges is exploring a
+  region its step size cannot resolve, typically the neck of a funnel where a
+  scale parameter approaches zero.
+
+### Fixed
+
+- `chainToolkit.samplers` is a getter, for the same import-cycle reason the
+  sampler registry is resolved at call time: loading a sampler module first
+  read the bindings before they existed.
+
 ## [0.7.1] - 2026-07-09
 
 ### Fixed
