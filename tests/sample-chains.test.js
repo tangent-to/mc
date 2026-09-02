@@ -113,8 +113,9 @@ describe('sample(model, init, { chains })', () => {
     const fit = await new NUTS({ stepSize: 0.05 }).sample(m, INIT, RUN);
     expect(fit.parallel).toBe(false);
     expect(fit.parallelReason).toMatch(/potential "extra" is a plain function/);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0][0]).toMatch(/running 3 chains in series; potential "extra"/);
+    const fallbackWarnings = warn.mock.calls.filter(([m]) => /running 3 chains in series/.test(m));
+    expect(fallbackWarnings).toHaveLength(1);
+    expect(fallbackWarnings[0][0]).toMatch(/running 3 chains in series; potential "extra"/);
     expect(fit.byChain.a).toHaveLength(3);
     warn.mockRestore();
   }, 60000);
@@ -124,7 +125,7 @@ describe('sample(model, init, { chains })', () => {
     m.potential('extra', (p) => -0.5 * p.a * p.a);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await new NUTS({ stepSize: 0.05 }).sample(m, INIT, { ...RUN, quiet: true });
-    expect(warn).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled(); // neither the fallback notice nor a divergence report
     warn.mockRestore();
   }, 60000);
 

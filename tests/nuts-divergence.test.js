@@ -14,7 +14,7 @@
  * see, so it shrinks the step size and the chain recovers.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Model } from '../src/model.js';
 import { Normal } from '../src/distributions/normal.js';
 import { HalfNormal } from '../src/distributions/halfnormal.js';
@@ -93,4 +93,54 @@ describe('NUTS divergence handling', () => {
     expect(out.trace.s.every((v) => v > 0)).toBe(true);
     expect(out.trace.s.every(Number.isFinite)).toBe(true);
   });
+});
+
+describe('divergent transitions are counted and reported', () => {
+  // The diagnostic R-hat and ESS cannot give. A funnel, a scale parameter
+  // whose prior lets it approach zero while other parameters scale with it,
+  // is where NUTS diverges; a well-behaved model should report none.
+  it('a benign model reports zero', () => {
+    const m = new Model();
+    m.addVariable('mu', new Normal(0, 10));
+    m.potential('y', (p) => Y.reduce((acc, v) => acc - 0.5 * (v - p.mu) ** 2, 0));
+    setRandomSeed(3);
+    const fit = new NUTS({ stepSize: 0.1 }).sample(m, { mu: 0 }, { nSamples: 300, nWarmup: 300 });
+    expect(fit.divergences).toBe(0);
+    expect(typeof fit.divergencesWarmup).toBe('number');
+  });
+
+  it('a centered funnel reports some, and warns once', () => {
+    // Neal's funnel, centered: x ~ N(0, exp(v/2)) with v ~ N(0, 3). The
+    // neck near v << 0 is where the step size fails. Sampled without the
+    // transform on purpose (v is unbounded), with a step too coarse for the
+    // neck, so divergences are certain.
+    const m = new Model();
+    m.addVariable('v', new Normal(0, 3));
+    m.addVariable('x', new Normal(0, 1));
+    m.potential('funnel', (p) => -0.5 * p.x * p.x * Math.exp(-p.v) - 0.5 * p.v);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setRandomSeed(3);
+    const fit = new NUTS({ stepSize: 0.5, targetAcceptance: 0.6 }).sample(m, { v: 0, x: 0 }, { nSamples: 400, nWarmup: 200 });
+    expect(fit.divergences).toBeGreaterThan(0);
+    const reports = warn.mock.calls.filter(([msg]) => /divergent transition/.test(msg));
+    expect(reports).toHaveLength(1);
+    expect(reports[0][0]).toMatch(/after warmup/);
+    warn.mockRestore();
+  });
+
+  it('a multi-chain run aggregates the counts and warns once', async () => {
+    const m = new Model();
+    m.addVariable('v', new Normal(0, 3));
+    m.addVariable('x', new Normal(0, 1));
+    m.potential('funnel', (p) => -0.5 * p.x * p.x * Math.exp(-p.v) - 0.5 * p.v);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fit = await new NUTS({ stepSize: 0.5, targetAcceptance: 0.6 }).sample(m, { v: 0, x: 0 },
+      { chains: 2, nSamples: 400, nWarmup: 200, seed: 3, parallel: false });
+    expect(fit.divergences).toHaveLength(2);
+    expect(fit.divergences.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    const reports = warn.mock.calls.filter(([msg]) => /divergent transition/.test(msg));
+    expect(reports).toHaveLength(1);
+    expect(reports[0][0]).toMatch(/across 2 chains/);
+    warn.mockRestore();
+  }, 30000);
 });

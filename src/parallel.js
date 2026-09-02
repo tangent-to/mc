@@ -103,7 +103,13 @@ export const chainToolkit = {
     Lognormal,
     HalfNormal,
   },
-  samplers: { MetropolisHastings, HamiltonianMC, NUTS, HMC },
+  // A getter, for the same reason samplerByName is a function: this module
+  // and the sampler modules import each other, and an object literal here
+  // would read the sampler bindings before they exist when a sampler module
+  // happens to be loaded first.
+  get samplers() {
+    return { MetropolisHastings, HamiltonianMC, NUTS, HMC };
+  },
 };
 
 // Resolved at call time, not at module evaluation. A sampler module imports
@@ -157,6 +163,7 @@ export function __runChain(spec) {
     trace: fit.trace,
     acceptanceRate: fit.acceptanceRate,
     stepSize: fit.stepSize ?? sampler.stepSize,
+    divergences: fit.divergences ?? 0,
   };
 }
 
@@ -448,7 +455,9 @@ export async function sampleModelChains(model, init, options, samplerName, sampl
     samplerName,
     samplerOptions,
     init: chainInit,
-    runOptions: { nSamples, nWarmup, thin },
+    // quiet: each chain reports its divergences in its result; the warning
+    // is issued once below, over all chains, rather than once per chain.
+    runOptions: { nSamples, nWarmup, thin, quiet: true },
     seed: chainSeed(seed, c),
   }));
 
@@ -471,13 +480,23 @@ export async function sampleModelChains(model, init, options, samplerName, sampl
       setRandomSeed(spec.seed);
       const sampler = new Sampler(samplerOptions ?? {});
       const fit = sampler.sample(model, spec.init, spec.runOptions);
-      return { trace: fit.trace, acceptanceRate: fit.acceptanceRate, stepSize: fit.stepSize ?? sampler.stepSize };
+      return { trace: fit.trace, acceptanceRate: fit.acceptanceRate, stepSize: fit.stepSize ?? sampler.stepSize, divergences: fit.divergences ?? 0 };
     });
+  }
+
+  const divergences = results.map((r) => r.divergences ?? 0);
+  const totalDivergent = divergences.reduce((a, b) => a + b, 0);
+  if (totalDivergent > 0 && !quiet) {
+    console.warn(
+      `sample: ${totalDivergent} divergent transition${totalDivergent === 1 ? '' : 's'} after warmup across ${chains} chains ` +
+        `(${divergences.join(', ')} per chain). The posterior has a region the step size cannot resolve; a scale ` +
+        'parameter near zero is the usual cause. Reparameterize (non-centered), or raise targetAcceptance.',
+    );
   }
 
   // Deterministics are functions and stayed here. A worker's trace lacks
   // them; the in-series path ran the live model, whose sampler already
   // appended them.
   if (ranParallel) for (const r of results) model.computeDeterministics(r.trace);
-  return pool(results, specs, ranParallel, { parallelReason });
+  return pool(results, specs, ranParallel, { parallelReason, divergences });
 }

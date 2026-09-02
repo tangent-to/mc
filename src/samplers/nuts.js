@@ -247,6 +247,15 @@ export class NUTS {
       const expHDiff = Math.exp(H0 - H);
       const alpha = Number.isFinite(expHDiff) ? Math.min(1, expHDiff) : 0;
 
+      // Divergence: the energy error blew up (H - H0 > deltaMax, Hoffman &
+      // Gelman's s' criterion), or the step left the support and H is not
+      // finite. NOT slice non-membership: a point outside the slice is an
+      // ordinary event that merely does not count toward the proposal, and
+      // reading it as a divergence would flag a fifth of the transitions of a
+      // one-dimensional Gaussian. A chain that diverges after warmup is
+      // exploring a region its step size cannot resolve, typically the neck
+      // of a funnel, and R-hat and ESS will not show it.
+      const divergent = !Number.isFinite(H) || (H - H0) > deltaMax;
       return {
         positionMinus: positionNew,
         positionPlus: positionNew,
@@ -256,8 +265,8 @@ export class NUTS {
         gradPlus: gradNew,
         positionPrime: positionNew,
         nValid: valid ? 1 : 0,
-        // Divergence: stop when the energy error blows up (H ≫ H0).
-        stop: !valid || (H - H0) > deltaMax,
+        stop: !valid || divergent,
+        divergent,
         alpha,
         nAlpha: 1
       };
@@ -306,6 +315,7 @@ export class NUTS {
       positionPrime,
       nValid: tree1.nValid + tree2.nValid,
       stop: tree1.stop || tree2.stop || uTurn,
+      divergent: tree1.divergent || tree2.divergent,
       alpha: tree1.alpha + tree2.alpha,
       nAlpha: tree1.nAlpha + tree2.nAlpha
     };
@@ -362,17 +372,22 @@ export class NUTS {
     const transformed = model !== userModel;
     const initialValues = transformed ? model.toUnconstrained(userInitialValues) : userInitialValues;
     let verbose = false;
+    let quiet = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
       nWarmup = o.nWarmup ?? o.burnIn ?? 500;
       thin = o.thin ?? 1;
       verbose = o.verbose ?? false;
+      quiet = o.quiet ?? false; // a multi-chain run aggregates and warns once itself
       nSamples = o.nSamples ?? 1000;
     }
     const log = verbose ? console.log : () => {};
     const variableNames = model.getFreeVariableNames();
     const trace = initTrace(variableNames);
     const accepted = { count: 0, total: 0 };
+    // Divergent transitions, counted per iteration. The post-warmup count is
+    // the one to act on; a few during warmup are the step size finding itself.
+    const divergences = { warmup: 0, sampling: 0 };
 
     // Current state
     let currentParams = { ...initialValues };
@@ -423,6 +438,7 @@ export class NUTS {
 
       let depth = 0;
       let stop = false;
+      let divergentTransition = false;
       let nValid = 1;
       let alpha = 0;
       let nAlpha = 0;
@@ -461,6 +477,7 @@ export class NUTS {
         }
 
         // Check for U-turn or divergence
+        if (tree.divergent) divergentTransition = true;
         stop = tree.stop || this.isUTurn(positionMinus, positionPlus, momentumMinus, momentumPlus);
 
         nValid += tree.nValid;
@@ -471,6 +488,10 @@ export class NUTS {
 
       // Update current state
       currentParams = proposedParams;
+      if (divergentTransition) {
+        if (i < nWarmup) divergences.warmup++;
+        else divergences.sampling++;
+      }
 
       // Mean Metropolis acceptance probability over the trajectory. Averaging
       // these per-iteration means gives the standard HMC/NUTS acceptance
@@ -521,11 +542,21 @@ export class NUTS {
 
     model.computeDeterministics(trace); // append post-hoc deterministic columns
 
+    if (divergences.sampling > 0 && !quiet) {
+      console.warn(
+        `NUTS: ${divergences.sampling} divergent transition${divergences.sampling === 1 ? '' : 's'} after warmup ` +
+          `(${((100 * divergences.sampling) / (totalIterations - nWarmup)).toFixed(1)}% of iterations). ` +
+          'The posterior has a region the step size cannot resolve; a scale parameter near zero is the ' +
+          'usual cause. Reparameterize (non-centered), or raise targetAcceptance.',
+      );
+    }
     return {
       trace,
       acceptanceRate: accepted.count / accepted.total,
       nSamples: nSamples,
-      stepSize: this.stepSize
+      stepSize: this.stepSize,
+      divergences: divergences.sampling,
+      divergencesWarmup: divergences.warmup,
     };
   }
 }
