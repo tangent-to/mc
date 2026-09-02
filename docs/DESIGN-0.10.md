@@ -2,9 +2,9 @@
 
 *Observed random variables, a serializable tape, and a `sample()` that chooses its own thread.*
 
-Status: proposal. Nothing here is implemented. The note records what a user
-writes today, what they should write, the three JavaScript constraints that
-shape the answer, and the order in which to build it.
+Status: implemented, all five steps, pending release as grad 0.2.0 and
+mc 0.10.0. One deviation from the plan is recorded in section 4.1: priors keep
+proba's analytic gradients. The note otherwise stands as the record of why.
 
 ## 1. The gap
 
@@ -130,11 +130,12 @@ logDensity(x) {
 
 Consequences:
 
-- **Priors lose their `dlogpdf` special case.** Their gradient comes from the
-  tape like everything else, exact to the same precision. The analytic
-  gradients from proba stay available for `.logProb()` on plain numbers, which
-  is still the fast path for Metropolis and for anything that never needs a
-  gradient.
+- **Priors keep proba's analytic `dlogpdf`.** The plan had them moving to the
+  tape for uniformity; in implementation there was no benefit to the user in
+  that, some risk to the PyMC parity tests, and no need from serialization,
+  since a prior travels as its kind and parameters and is reconstructed on the
+  far side. `logDensity` exists on every distribution and is what `observe`
+  uses; a prior's gradient comes from `dlogpdf` as before.
 - **The seven built-in distributions are the scope.** A user-defined
   `Distribution` subclass keeps working on the numeric path and is simply not
   differentiable, exactly as today.
