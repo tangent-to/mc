@@ -1,4 +1,5 @@
 import { isOptions } from '../distributions/base.js';
+import { sampleModelChains } from '../parallel.js';
 import { getRng } from '../rng.js';
 import { axpy, computeHamiltonian, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
 
@@ -139,6 +140,9 @@ export class HamiltonianMC {
    * hmc.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
    */
   sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
+    if (isOptions(nSamples) && nSamples.chains > 1) {
+      return sampleModelChains(model, initialValues, nSamples, 'hamiltonian', this.getParams());
+    }
     let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;

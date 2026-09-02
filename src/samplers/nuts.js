@@ -2,6 +2,7 @@ import { isOptions } from '../distributions/base.js';
 import { getRng } from '../rng.js';
 import { axpy, computeHamiltonian, dotValue, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
 import { unconstrainedView } from '../transforms.js';
+import { sampleModelChains } from '../parallel.js';
 
 /**
  * No-U-Turn Sampler (NUTS)
@@ -334,7 +335,21 @@ export class NUTS {
    * @example
    * nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
    */
+  /**
+   * `sample(model, init, { chains: 4, ... })` runs four chains and returns a
+   * Promise of `{ trace, byChain, chains, acceptanceRates, seeds, parallel,
+   * parallelReason }`, pooled and per chain. With one chain, or the positional
+   * form, it returns the trace synchronously as before.
+   */
   sample(userModel, userInitialValues, nSamples = 1000, nWarmup = 500, thin = 1) {
+    // Several chains: hand the model over as data and let the runtime decide
+    // between workers and this thread. The draws are the same either way; see
+    // sampleModelChains for the decision and its one-line notice. This is the
+    // one case where sample() returns a Promise, since a worker is
+    // asynchronous by nature.
+    if (isOptions(nSamples) && nSamples.chains > 1) {
+      return sampleModelChains(userModel, userInitialValues, nSamples, 'nuts', this.getParams());
+    }
     // Move through the UNCONSTRAINED parameterization. A scale in (0, ∞) or a
     // probability in (0, 1) has no business being stepped through directly:
     // leapfrog walks it past its boundary, where the density is -Infinity and

@@ -106,7 +106,13 @@ export const chainToolkit = {
   samplers: { MetropolisHastings, HamiltonianMC, NUTS, HMC },
 };
 
-const SAMPLERS = { nuts: NUTS, hmc: HMC, metropolis: MetropolisHastings };
+// Resolved at call time, not at module evaluation. A sampler module imports
+// this one to offer `sample(model, init, { chains })`, and this one imports
+// the samplers to run them, so whichever is loaded first sees the other's
+// bindings still uninitialized while its own body runs. Reading them inside
+// a function, after every module has finished evaluating, sidesteps that.
+const samplerByName = (name) =>
+  ({ nuts: NUTS, hmc: HMC, hamiltonian: HamiltonianMC, metropolis: MetropolisHastings })[name];
 
 /** Derive a per-chain seed from the base seed (golden-ratio increment). */
 function chainSeed(seed, chain) {
@@ -125,17 +131,24 @@ function chainSeed(seed, chain) {
  */
 export function __runChain(spec) {
   setRandomSeed(spec.seed);
-  let factory;
-  try {
-    factory = (0, eval)(`(${spec.factorySrc})`);
-  } catch (err) {
-    throw new Error(`sampleChains: could not evaluate the model factory: ${err.message}`);
+  let model;
+  if (spec.modelJSON) {
+    // The model arrived as data: variables by kind and parameters, terms as
+    // compiled plans. No factory, no closure, nothing to evaluate.
+    model = Model.fromJSON(spec.modelJSON);
+  } else {
+    let factory;
+    try {
+      factory = (0, eval)(`(${spec.factorySrc})`);
+    } catch (err) {
+      throw new Error(`sampleChains: could not evaluate the model factory: ${err.message}`);
+    }
+    model = factory(spec.data, chainToolkit);
   }
-  const model = factory(spec.data, chainToolkit);
-  const Sampler = SAMPLERS[spec.samplerName];
+  const Sampler = samplerByName(spec.samplerName);
   if (!Sampler) {
     throw new Error(
-      `sampleChains: unknown sampler "${spec.samplerName}" (use ${Object.keys(SAMPLERS).join(' | ')})`,
+      `sampleChains: unknown sampler "${spec.samplerName}" (use nuts | hmc | hamiltonian | metropolis)`,
     );
   }
   const sampler = new Sampler(spec.samplerOptions ?? {});
@@ -312,30 +325,42 @@ export async function sampleChains(modelFactory, options = {}) {
     seed: chainSeed(seed, c),
   }));
 
-  let results;
+  const { results, ranParallel } = await runSpecs(specs, parallel, (msg) => {
+    // A missing-variable error means the factory is not self-contained —
+    // rerunning sequentially would NOT fix it, so fail loudly with guidance.
+    if (/is not defined/.test(msg)) {
+      throw new Error(
+        `sampleChains: the model factory references a variable that does not exist inside the worker (${msg}). ` +
+          'The factory must be self-contained: use only its (data, mc) arguments and pass everything else through options.data.',
+      );
+    }
+  });
+  return pool(results, specs, ranParallel);
+}
+
+/**
+ * Run chain specs across workers, or in series when workers are unavailable
+ * or declined. `onWorkerError` may turn a worker failure into a clearer
+ * error by throwing; if it returns, the run falls back to series. @private
+ */
+async function runSpecs(specs, parallel, onWorkerError) {
+  let results = null;
   let ranParallel = false;
   if (parallel) {
     try {
       results = await Promise.all(specs.map((spec) => runChainInWorker(spec)));
       ranParallel = true;
     } catch (err) {
-      const msg = String((err && err.message) || err);
-      // A missing-variable error means the factory is not self-contained —
-      // rerunning sequentially would NOT fix it, so fail loudly with guidance.
-      if (/is not defined/.test(msg)) {
-        throw new Error(
-          `sampleChains: the model factory references a variable that does not exist inside the worker (${msg}). ` +
-            'The factory must be self-contained: use only its (data, mc) arguments and pass everything else through options.data.',
-        );
-      }
+      onWorkerError(String((err && err.message) || err));
       results = null; // worker machinery unavailable → sequential fallback
     }
   }
-  if (!results) {
-    results = specs.map((spec) => __runChain(spec));
-  }
+  if (!results) results = specs.map((spec) => __runChain(spec));
+  return { results, ranParallel };
+}
 
-  // Assemble: per-chain fits, by-chain arrays per parameter, pooled trace.
+/** Per-chain fits, by-chain arrays per parameter, pooled trace. @private */
+function pool(results, specs, ranParallel, extra = {}) {
   const paramNames = Object.keys(results[0].trace);
   const byChain = {};
   const trace = {};
@@ -343,7 +368,6 @@ export async function sampleChains(modelFactory, options = {}) {
     byChain[name] = results.map((r) => r.trace[name]);
     trace[name] = results.flatMap((r) => r.trace[name]);
   }
-
   return {
     chains: results.map((r, c) => ({ ...r, seed: specs[c].seed })),
     byChain,
@@ -351,5 +375,109 @@ export async function sampleChains(modelFactory, options = {}) {
     acceptanceRates: results.map((r) => r.acceptanceRate),
     seeds: specs.map((s) => s.seed),
     parallel: ranParallel,
+    ...extra,
   };
+}
+
+/** Is there any way to start a worker in this runtime? @private */
+function workersAvailable() {
+  return typeof Worker !== 'undefined' || isNode();
+}
+
+/**
+ * Several chains of one model, on workers when the runtime and the model
+ * allow it and on the calling thread otherwise, with the same draws either
+ * way. This is what a sampler's `sample(model, init, { chains })` runs.
+ *
+ * The decision, in order:
+ *
+ * 1. `parallel: false` was passed: in series, from the same per-chain seeds a
+ *    worker run would use.
+ * 2. Otherwise the model must be serializable (every variable one of mc's
+ *    distributions, every term a compiled plan) and the runtime must be able
+ *    to start a worker. If both hold, workers. If either fails, in series, and
+ *    the result says why in `parallelReason`, once, on the console as well.
+ *
+ * Deterministics are applied on this thread once the chains return, since
+ * they are functions and do not travel.
+ *
+ * @param {Model} model
+ * @param {Object} init - initial point, used for every chain unless `inits` is given
+ * @param {Object} options - `{ chains, nSamples, nWarmup, thin, seed, parallel, inits, quiet }`
+ * @param {string} samplerName - key of the sampler registry
+ * @param {Object} samplerOptions - what the sampler's constructor takes
+ * @returns {Promise<Object>} as {@link sampleChains}, plus `parallelReason`
+ */
+export async function sampleModelChains(model, init, options, samplerName, samplerOptions) {
+  const {
+    chains = 4,
+    nSamples = 1000,
+    nWarmup = 500,
+    thin = 1,
+    seed = 42,
+    parallel = true,
+    inits,
+    quiet = false,
+  } = options;
+  const initList = Array.isArray(inits) ? inits : Array.from({ length: chains }, () => init);
+  if (initList.length !== chains) {
+    throw new Error(`sample: got ${initList.length} inits for ${chains} chains`);
+  }
+
+  let useWorkers = parallel;
+  let parallelReason = null;
+  if (useWorkers) {
+    const check = model.serializable();
+    if (!check.ok) {
+      useWorkers = false;
+      parallelReason = check.reason;
+    } else if (!workersAvailable()) {
+      useWorkers = false;
+      parallelReason = 'this runtime cannot start a worker';
+    }
+  }
+  if (parallelReason && !quiet) {
+    console.warn(`sample: running ${chains} chains in series; ${parallelReason}.`);
+  }
+
+  // The specs carry the model as data, traced at the first init: every chain
+  // shares one set of shapes, which is what a plan is bound to.
+  const modelJSON = useWorkers ? model.toJSON(initList[0]) : null;
+  const specs = initList.map((chainInit, c) => ({
+    modelJSON,
+    samplerName,
+    samplerOptions,
+    init: chainInit,
+    runOptions: { nSamples, nWarmup, thin },
+    seed: chainSeed(seed, c),
+  }));
+
+  let results;
+  let ranParallel = false;
+  if (useWorkers) {
+    const run = await runSpecs(specs, true, () => {});
+    results = run.results;
+    ranParallel = run.ranParallel;
+    if (!ranParallel) {
+      parallelReason = 'the worker could not be started';
+      if (!quiet) console.warn(`sample: running ${chains} chains in series; ${parallelReason}.`);
+    }
+  } else {
+    // In series against the live model: no round trip through data, and
+    // byte-identical to what the workers would draw, since both paths derive
+    // the same per-chain seeds.
+    const Sampler = samplerByName(samplerName);
+    results = specs.map((spec) => {
+      setRandomSeed(spec.seed);
+      const sampler = new Sampler(samplerOptions ?? {});
+      const fit = sampler.sample(model, spec.init, spec.runOptions);
+      return { trace: fit.trace, acceptanceRate: fit.acceptanceRate, stepSize: fit.stepSize ?? sampler.stepSize };
+    });
+  }
+
+  // Deterministics are functions and stayed here. A worker's trace lacks
+  // them; the in-series path ran the live model, whose sampler already
+  // appended them.
+  if (ranParallel) for (const r of results) model.computeDeterministics(r.trace);
+  return pool(results, specs, ranParallel, { parallelReason });
 }

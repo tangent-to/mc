@@ -23,8 +23,14 @@
  * @see {@link https://www.pymc.io/|PyMC Documentation}
  */
 
-import { valueAndGradFns } from '@tangent.to/grad';
+import { compileFromJSON, splitValueAndGrad, valueAndGradFns } from '@tangent.to/grad';
 import { Distribution } from './distributions/base.js';
+import * as distributions from './distributions/index.js';
+
+/** The distributions a serialized model may name, by class name. @private */
+const DISTRIBUTIONS = Object.fromEntries(
+  Object.entries(distributions).filter(([k, v]) => k !== 'Distribution' && typeof v === 'function'),
+);
 import { makeTransform, supportOf } from './transforms.js';
 
 /** Sum a number or an array of numbers. */
@@ -613,6 +619,99 @@ export class Model {
    * @param {Object} trace - Trace map `{ name: [...] }` or a `{ trace }` wrapper.
    * @returns {Object} The same trace, with one column per deterministic.
    */
+  /**
+   * Can this model be written out as data and rebuilt elsewhere?
+   *
+   * It can when every variable is one of mc's own distributions, so it
+   * travels as a class name and parameters, and every potential is a compiled
+   * grad term, so it travels as a plan. A `potential` written over plain
+   * numbers is a function and cannot; a user-defined distribution cannot. The
+   * answer names the first thing that stands in the way, since it is what the
+   * user would have to change to get parallel chains.
+   *
+   * @returns {{ ok: true } | { ok: false, reason: string }}
+   */
+  serializable() {
+    for (const [name, dist] of this.variables.entries()) {
+      const kind = dist?.constructor?.name;
+      if (!DISTRIBUTIONS[kind]) {
+        return { ok: false, reason: `variable "${name}" has a distribution (${kind ?? 'unknown'}) that is not one of mc's own` };
+      }
+      if (typeof dist.getParams !== 'function') {
+        return { ok: false, reason: `variable "${name}" cannot report its parameters` };
+      }
+    }
+    for (const name of this.potentials.keys()) {
+      if (!this.compiledTerms.has(name)) {
+        return { ok: false, reason: `potential "${name}" is a plain function and cannot be sent to a worker; write it with autoPotential or observe` };
+      }
+    }
+    return { ok: true };
+  }
+
+  /**
+   * The model as data. Every variable as its distribution's class name and
+   * parameters; every term as a compiled plan; deterministics left out, since
+   * they run on the trace afterwards and stay on the calling thread.
+   *
+   * A plan exists only once its graph has been traced, which needs a point to
+   * trace at; `at` is that point, in the model's own (constrained)
+   * parameterization, the same values a sampler is initialized with.
+   *
+   * @param {Object} at - a full set of parameter values
+   * @returns {Object} structured-clonable
+   */
+  toJSON(at) {
+    const check = this.serializable();
+    if (!check.ok) throw new Error(`Model.toJSON: ${check.reason}`);
+    if (!at || typeof at !== 'object') {
+      throw new Error('Model.toJSON: pass a point to trace the terms at, e.g. the sampler\'s initial values');
+    }
+    // Trace every compiled term once, so each plan has a graph to write out.
+    for (const name of this.compiledTerms.keys()) this.potentials.get(name)(at);
+    return {
+      version: 1,
+      name: this.name,
+      variables: Array.from(this.variables.entries(), ([name, dist]) => ({
+        name,
+        kind: dist.constructor.name,
+        params: dist.getParams(),
+        observed: this.observedVars.has(name) ? this.observedVars.get(name) : undefined,
+      })),
+      terms: Array.from(this.compiledTerms.entries(), ([name, compiled]) => ({
+        name,
+        plan: compiled.toJSON(),
+      })),
+    };
+  }
+
+  /**
+   * Rebuild a model from {@link Model#toJSON}'s output, on any thread.
+   *
+   * The terms come back as compiled plans, bound to the shapes they were
+   * traced at. Deterministics do not travel; add them on the calling side
+   * and apply them to the trace when the chains return.
+   *
+   * @param {Object} json
+   * @returns {Model}
+   */
+  static fromJSON(json) {
+    if (!json || json.version !== 1) throw new Error('Model.fromJSON: not a serialized model');
+    const m = new Model(json.name);
+    for (const v of json.variables) {
+      const Dist = DISTRIBUTIONS[v.kind];
+      if (!Dist) throw new Error(`Model.fromJSON: unknown distribution "${v.kind}"`);
+      m.addVariable(v.name, new Dist(v.params), v.observed === undefined ? null : v.observed);
+    }
+    for (const t of json.terms) {
+      const vg = compileFromJSON(t.plan);
+      const { value, gradient } = splitValueAndGrad(vg); // one evaluation per point
+      m.potential(t.name, value, gradient);
+      m.compiledTerms.set(t.name, vg);
+    }
+    return m;
+  }
+
   computeDeterministics(trace) {
     if (!this.deterministics.size || !trace) return trace;
     const cols = trace.trace || trace;
