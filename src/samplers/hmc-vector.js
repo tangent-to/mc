@@ -1,5 +1,6 @@
 import { getRng, setRandomSeed } from '../rng.js';
 import { unconstrainedView } from '../transforms.js';
+import { sampleModelChains } from '../parallel.js';
 import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
 
 /**
@@ -51,7 +52,20 @@ export class HMC {
    * @returns {{ trace: Object, acceptanceRate: number, stepSize: number,
    *            divergences: number, specs: Array }}
    */
-  sample(userModel, userInitialValues, { nSamples = 1000, nWarmup = 500, thin = 1, progress = false } = {}) {
+  /** The constructor options, so a worker can rebuild this sampler. */
+  getParams() {
+    return { stepSize: this.stepSize, nSteps: this.nSteps, targetAccept: this.targetAccept, adapt: this.adapt };
+  }
+
+  sample(userModel, userInitialValues, options = {}) {
+    // Several chains: as NUTS, on workers where the runtime and the model
+    // allow, in series otherwise, identical draws either way. Returns a
+    // Promise in that one case. The in-process sampleChains below is the
+    // older per-chain-array form and is kept.
+    if (options.chains > 1) {
+      return sampleModelChains(userModel, userInitialValues, options, 'hmc', this.getParams());
+    }
+    const { nSamples = 1000, nWarmup = 500, thin = 1, progress = false } = options;
     // Move through the unconstrained parameterization, as NUTS and
     // HamiltonianMC do. The view is the model itself when nothing is bounded.
     const model = unconstrainedView(userModel);

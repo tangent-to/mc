@@ -156,6 +156,14 @@ describe('sample(model, init, { chains })', () => {
     expect(typeof fit.then).toBe('undefined');
   });
 
+  it('works for the vector HMC as well', async () => {
+    const { HMC } = await import('../src/samplers/hmc-vector.js');
+    const fit = await new HMC({ stepSize: 0.05, nSteps: 10 }).sample(regression(), INIT, { chains: 2, nSamples: 200, nWarmup: 200, seed: 3 });
+    expect(fit.parallel).toBe(true);
+    expect(fit.byChain.a).toHaveLength(2);
+    expect(mean(fit.trace.a)).toBeCloseTo(1.5, 0);
+  }, 60000);
+
   it('works for Metropolis as well', async () => {
     const fit = await new MetropolisHastings(0.3).sample(regression(), INIT, { chains: 2, nSamples: 200, burnIn: 200, seed: 3 });
     expect(fit.parallel).toBe(true);
