@@ -483,6 +483,22 @@ places, in descending order of preference:
   a run. Pass `{ compile: false }` if you step outside that, by branching on a
   parameter's numeric value or closing over data that mutates mid-run.
 
+  Models written this way run in parallel like any other. `sampleChains` sends
+  the factory's source to each worker, where it can reference nothing but its
+  two arguments, so grad's ops arrive as `mc.ops`:
+
+  ```javascript
+  await sampleChains((data, mc) => {
+    const { add, div, log, mul, square, sub, sum } = mc.ops;
+    const model = new mc.Model('lin');
+    // ... addVariable, then autoPotential written in those ops
+    return model;
+  }, { data, chains: 4, inits, nSamples: 400, nWarmup: 400, seed: 20240115 });
+  ```
+
+  On a 340-observation model with 15 parameters, four chains of 400 draws take
+  19.5 s in series and 5.7 s on four workers, drawing the same samples.
+
 - **Potentials written with `potential`** fall back to central finite differences,
   which cost 2·(#params) extra evaluations of the whole term per gradient and are
   accurate only to ~1e-7 - enough error to cost the leapfrog integrator its

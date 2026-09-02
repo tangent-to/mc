@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { sampleChains } from '../src/parallel.js';
+import { chainToolkit, sampleChains } from '../src/parallel.js';
 import { gelmanRubin, effectiveSampleSize } from '../src/utils/trace.js';
 
-// Self-contained factory: linear regression with an analytic potential
-// gradient, the shape the guava notebook uses. Uses ONLY (data, mc).
+// Self-contained factory: linear regression with a hand-written potential
+// gradient. Uses ONLY (data, mc).
 const linearFactory = (data, mc) => {
   const model = new mc.Model('lin');
   model.addVariable('a', new mc.distributions.Normal(0, 5));
@@ -110,5 +110,58 @@ describe('sampleChains', () => {
     await expect(
       sampleChains(linearFactory, { chains: 3, inits: [{ a: 0 }] }),
     ).rejects.toThrow(/1 inits for 3 chains/);
+  });
+});
+
+describe('sampleChains with autoPotential', () => {
+  // A model written in grad ops is the one shape a worker could not run. The
+  // ops arrive by import at the top of a module, and a factory sees nothing but
+  // its two arguments, so the most differentiable models in the package were
+  // exactly the ones stuck on a single thread. mc.ops closes that.
+  const autoFactory = (data, mc) => {
+    const { add, sub, mul, div, exp, log, square, sum } = mc.ops;
+    const model = new mc.Model('lin-auto');
+    model.addVariable('a', new mc.distributions.Normal(0, 5));
+    model.addVariable('b', new mc.distributions.Normal(0, 5));
+    model.addVariable('logSig', new mc.distributions.Normal(0, 1));
+    model.autoPotential('lik', (v) => {
+      const sig = exp(v.logSig);
+      const r = div(sub(data.ys, add(mul(v.b, data.xs), v.a)), sig);
+      return sub(mul(-0.5, sum(square(r))), mul(data.ys.length, log(sig)));
+    });
+    return model;
+  };
+
+  it('runs a grad-ops model in workers and recovers the posterior', async () => {
+    const data = makeData();
+    const fit = await sampleChains(autoFactory, { ...RUN, data, chains: 2, inits: INITS });
+
+    expect(fit.parallel).toBe(true);
+    expect(fit.byChain.a).toHaveLength(2);
+    const mean = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length;
+    expect(mean(fit.trace.a)).toBeCloseTo(1.5, 0);
+    expect(mean(fit.trace.b)).toBeCloseTo(0.8, 0);
+    expect(gelmanRubin(fit.byChain.b)).toBeLessThan(1.2);
+  }, 60000);
+
+  it('gives the same draws in workers as in process', async () => {
+    // The compiled tape lives inside each worker, built there from the same
+    // factory source and the same seed. If replay drifted from a rebuild, the
+    // two paths would separate here.
+    const data = makeData();
+    const par = await sampleChains(autoFactory, { ...RUN, data, chains: 2, inits: INITS });
+    const seq = await sampleChains(autoFactory, {
+      ...RUN, data, chains: 2, inits: INITS, parallel: false,
+    });
+    expect(seq.trace.a).toEqual(par.trace.a);
+    expect(seq.trace.b).toEqual(par.trace.b);
+    expect(seq.trace.logSig).toEqual(par.trace.logSig);
+  }, 120000);
+
+  it('exposes the ops a model expression is built from', () => {
+    for (const name of ['add', 'sub', 'mul', 'div', 'exp', 'log', 'square',
+      'sum', 'matmul', 'relu', 'maximum', 'minimum']) {
+      expect(typeof chainToolkit.ops[name], name).toBe('function');
+    }
   });
 });

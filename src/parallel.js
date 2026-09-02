@@ -63,19 +63,36 @@ import {
   HalfNormal,
 } from './distributions/index.js';
 import { MetropolisHastings, HamiltonianMC, NUTS, HMC } from './samplers/index.js';
+import * as gradOps from '@tangent.to/grad';
 
 const MODULE_URL = import.meta.url;
 
 /**
  * The `mc` argument handed to the model factory (in the parent AND in each
- * worker): the Model class, every distribution and sampler, and the RNG
- * controls. A factory needs nothing else from the package.
+ * worker): the Model class, every distribution and sampler, the RNG controls,
+ * and `@tangent.to/grad`'s ops. A factory needs nothing else from the package.
+ *
+ * The ops are here because a factory cannot close over anything. A model
+ * written with {@link Model#autoPotential} builds its log-density out of grad
+ * ops, and those arrive by import at the top of a module, which is exactly what
+ * a worker cannot see. Without them the most differentiable models in the
+ * package were the ones that could not be run in parallel. Destructure at the
+ * top of the factory:
+ *
+ * ```js
+ * (data, mc) => {
+ *   const { add, sub, mul, div, exp, log, square, sum } = mc.ops;
+ *   ...
+ * }
+ * ```
+ *
  * @type {Object}
  */
 export const chainToolkit = {
   Model,
   setRandomSeed,
   getRng,
+  ops: gradOps,
   distributions: {
     Distribution,
     Normal,
