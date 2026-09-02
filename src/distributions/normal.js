@@ -1,4 +1,6 @@
 import { normal } from '@tangent.to/proba';
+import { div, log, mul, square, sub, sum } from '@tangent.to/grad';
+const LN_SQRT_2PI = 0.9189385332046727;
 import { Distribution, isOptions } from './base.js';
 
 /**
@@ -42,6 +44,14 @@ export class Normal extends Distribution {
    */
   _params() {
     return { mu: this.mu, sigma: this.sigma };
+  }
+
+  logDensity(value) {
+    // -log sigma - ln sqrt(2 pi) - z^2 / 2, elementwise, then summed. Written
+    // so the vector shape comes from z: a scalar sigma broadcasts against it
+    // and is counted once per element, a per-element sigma is counted as is.
+    const z = div(sub(value, this.mu), this.sigma);
+    return sum(sub(sub(mul(-0.5, square(z)), log(this.sigma)), LN_SQRT_2PI));
   }
 
   /**

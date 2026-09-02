@@ -1,4 +1,6 @@
 import { halfnormal } from '@tangent.to/proba';
+import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
+const LN_SQRT_2_OVER_PI = -0.2257913526447274;
 import { Distribution, isOptions } from './base.js';
 
 /**
@@ -29,6 +31,13 @@ export class HalfNormal extends Distribution {
    */
   _params() {
     return { sigma: this.sigma };
+  }
+
+  logDensity(value) {
+    // ln sqrt(2/pi) - log sigma - z^2 / 2 for x >= 0. The support is the
+    // sampler's business (it moves through log sigma), so no clamp here.
+    const z = div(value, this.sigma);
+    return sum(add(sub(mul(-0.5, square(z)), log(this.sigma)), LN_SQRT_2_OVER_PI));
   }
 
   /**

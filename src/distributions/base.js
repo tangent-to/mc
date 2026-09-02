@@ -10,6 +10,8 @@
 
 import { getRng } from '../rng.js';
 
+import { Var } from '@tangent.to/grad';
+
 /**
  * Determine whether the first constructor argument is an options object
  * (e.g. `new Normal({ mu, sigma })`) rather than a positional value.
@@ -22,7 +24,11 @@ import { getRng } from '../rng.js';
  * @returns {boolean} True if `value` should be interpreted as an options object
  */
 export function isOptions(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  // A grad Var is an object too, and a distribution built for autodiff takes
+  // one as a parameter. Reading it as an options bag would quietly turn
+  // `new Normal(muVar, sigma)` into `new Normal({ mu: undefined })`, a
+  // Normal(0, 1), with no error anywhere. So a Var is never an options object.
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Var);
 }
 
 /** Read tensors (or tensor-likes) back to plain numbers/arrays. */
@@ -107,6 +113,30 @@ export class Distribution {
       out[i] = this._dist.logpdf(xIsArr ? x[i] : x, cur);
     }
     return out;
+  }
+
+  /**
+   * The log-density as a differentiable expression, SUMMED over elements.
+   *
+   * Where {@link Distribution#logProb} takes plain numbers and returns the
+   * elementwise density, this takes parameters that may be grad `Var`s, built
+   * from the model's free variables, and returns one scalar `Var`: the total
+   * log-density of `value` under this distribution, differentiable in every
+   * parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+   * likelihood is derived from the distribution rather than written by hand.
+   *
+   * The seven built-in distributions implement it. A subclass that does not is
+   * still a valid prior and a valid `logProb`; it is simply not differentiable,
+   * and `observe` will say so.
+   *
+   * @param {number|Array} value - observed value(s), plain numbers
+   * @returns {import('@tangent.to/grad').Var} scalar
+   */
+  logDensity(_value) {
+    throw new Error(
+      `${this.name}: logDensity is not implemented, so this distribution cannot be ` +
+        'differentiated. Write the term with model.autoPotential instead.',
+    );
   }
 
   /**

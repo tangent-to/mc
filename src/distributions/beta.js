@@ -1,4 +1,5 @@
 import { beta as probaBeta } from '@tangent.to/proba';
+import { add, lgamma, log, mul, sub, sum } from '@tangent.to/grad';
 import { Distribution, isOptions } from './base.js';
 
 /**
@@ -31,6 +32,17 @@ export class Beta extends Distribution {
    */
   _params() {
     return { alpha: this.alpha, beta: this.beta };
+  }
+
+  logDensity(value) {
+    // (alpha - 1) log x + (beta - 1) log(1 - x) - lbeta(alpha, beta), 0 < x < 1,
+    // with lbeta = lgamma(a) + lgamma(b) - lgamma(a + b).
+    const lbeta = sub(add(lgamma(this.alpha), lgamma(this.beta)), lgamma(add(this.alpha, this.beta)));
+    const perElement = sub(
+      add(mul(sub(this.alpha, 1), log(value)), mul(sub(this.beta, 1), log(sub(1, value)))),
+      lbeta,
+    );
+    return sum(perElement);
   }
 
   /**

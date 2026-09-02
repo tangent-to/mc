@@ -1,4 +1,5 @@
 import { gamma } from '@tangent.to/proba';
+import { add, lgamma, log, mul, sub, sum } from '@tangent.to/grad';
 import { Distribution, isOptions } from './base.js';
 
 /**
@@ -42,6 +43,18 @@ export class Gamma extends Distribution {
    */
   _params() {
     return { alpha: this.alpha, beta: this.beta };
+  }
+
+  logDensity(value) {
+    // alpha log beta - lgamma(alpha) + (alpha - 1) log x - beta x, x > 0.
+    // lgamma is grad's, so a shape parameter that is a Var differentiates
+    // through the digamma function.
+    const lx = log(value);
+    const perElement = sub(
+      add(mul(this.alpha, log(this.beta)), mul(sub(this.alpha, 1), lx)),
+      add(lgamma(this.alpha), mul(this.beta, value)),
+    );
+    return sum(perElement);
   }
 
   /**
