@@ -24,15 +24,14 @@ linear regression from priors to posterior summary.
 direct ESM import from a CDN - no install and no build step. It is also published to
 npm and JSR for bundler and Node projects.
 
-It uses [TensorFlow.js](https://www.tensorflow.org/js) (`@tensorflow/tfjs`) for tensor
-math and automatic differentiation. `tfjs` is a **peer dependency**: it is not bundled,
-so it is loaded once and shared (mixing two copies breaks tensor interop). On a CDN the
-`+esm` endpoint resolves it for you; with a bundler you install it alongside `mc`.
+It runs on plain JavaScript numbers and arrays. Its only dependencies are two small
+suite leaves — [proba](https://github.com/tangent-to/proba) for distributions and
+[grad](https://github.com/tangent-to/grad) for autodiff — and both are resolved for you
+on a CDN and by any bundler. There is no peer dependency to install.
 
 ### Browser / CDN (no build step)
 
-jsDelivr's `+esm` endpoint auto-resolves `tfjs`, so a single import works in a plain
-`<script type="module">` - nothing else to load:
+A single import works in a plain `<script type="module">` - nothing else to load:
 
 ```html
 <script type="module">
@@ -60,23 +59,14 @@ import { Model, Normal, MetropolisHastings } from "npm:@tangent.to/mc";
 
 ### Node.js / npm / bundlers
 
-For a bundler (Vite, webpack, esbuild, …) or a Node project, install `mc` with the
-`tfjs` peer dependency alongside it:
+For a bundler (Vite, webpack, esbuild, …) or a Node project:
 
 ```bash
-npm install @tangent.to/mc @tensorflow/tfjs
+npm install @tangent.to/mc
 ```
 
 ```javascript
 import { Model, Normal, MetropolisHastings, printSummary } from '@tangent.to/mc';
-```
-
-The bundler resolves the peer dependency for you - nothing else to do. `mc` also
-re-exports the shared `tf` instance, so you can build tensors with the exact copy the
-library uses:
-
-```javascript
-import { tf } from '@tangent.to/mc';
 ```
 
 ## Import styles
@@ -102,7 +92,8 @@ noise scale from data.
 ### 1. The data
 
 ```javascript
-import { Model, Normal, HalfNormal, HMC, summary } from '@tangent.to/mc';
+import mc, { Model, Normal, HalfNormal, NUTS, summary } from '@tangent.to/mc';
+const { add, mul } = mc.ops;
 
 // Synthetic data generated from alpha = 1, beta = 2, sigma = 0.5
 const x = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -111,48 +102,57 @@ const y = [1.1, 2.8, 5.2, 6.9, 9.1, 11.0, 12.8, 15.2];
 
 ### 2. Define the model
 
-Declare a prior for each free variable with `addVariable`, then attach the
-likelihood with `potential`. A potential receives the current parameter values
-(as `tf` tensors) and returns a log-density tensor that is summed into the joint
-log-probability.
+Declare a prior for each free variable with `addVariable`, then say what was
+observed with `observe`. The factory you give `observe` receives the free variables
+and returns the distribution the data came from, with its parameters written as
+expressions in those variables; the likelihood and its exact gradient are derived
+from that distribution.
 
 ```javascript
 const model = new Model('linear_regression');
 
-// Priors
-model.addVariable('alpha', new Normal({ mean: 0, sd: 10, name: 'alpha' }));
-model.addVariable('beta',  new Normal({ mean: 0, sd: 10, name: 'beta' }));
-model.addVariable('sigma', new HalfNormal(5, 'sigma'));
+// Priors, each on its natural scale. sigma is positive by its prior, and the
+// sampler moves through a transform that keeps it so.
+model.addVariable('alpha', new Normal(0, 10));
+model.addVariable('beta',  new Normal(0, 10));
+model.addVariable('sigma', new HalfNormal(5));
 
-// Likelihood: y ~ Normal(alpha + beta * x, sigma)
-model.potential('y', (p) => {
-  const xt = tf.tensor1d(x);
-  const mu = tf.add(tf.mul(p.beta, xt), p.alpha);
-  return new Normal(mu, p.sigma).logProb(tf.tensor1d(y));
-});
+// Observation model: y ~ Normal(alpha + beta * x, sigma).
+model.observe('y', (v) => new Normal(add(v.alpha, mul(v.beta, x)), v.sigma), y);
 ```
 
-Here `tf` is the shared TensorFlow.js instance - import it with
-`import { tf } from '@tangent.to/mc'`.
+The mean is written with `add` and `mul` from `mc.ops` rather than `+` and `*`,
+because JavaScript cannot overload operators on an object; both take any number of
+operands, so a longer mean is still one flat call. The operations come from `mc.ops`
+and not from a separate import of grad, which would load the module twice and break
+the expression the moment the two copies disagreed on a version.
+
+For a likelihood no distribution supplies, `autoPotential(name, fn)` takes the
+log-density itself as an expression in those operations, and `potential(name, fn)`
+takes it as a plain function of numbers, differentiated by finite differences.
 
 ### 3. Sample the posterior
 
-The vector-aware `HMC` sampler uses gradients (via automatic differentiation) and
-works well for this gradient-friendly model. Provide a starting point for every free
-variable:
+`NUTS` uses the gradient and tunes its own step size. Provide a starting point for
+every free variable and ask for four chains:
 
 ```javascript
-const sampler = new HMC({ stepSize: 0.01, nSteps: 20 });
-
-const result = sampler.sample(
+const fit = await new NUTS().sample(
   model,
   { alpha: 0, beta: 0, sigma: 1 },
-  { nSamples: 1000, nWarmup: 500 }
+  { chains: 4, nSamples: 1000, nWarmup: 500 }
 );
 ```
 
-`HMC#sample` returns `{ trace, acceptanceRate, stepSize, divergences }`. The `trace`
-holds the posterior draws keyed by variable name.
+The chains run on worker threads when the runtime can start one and the model can
+be sent across, which a model built from `addVariable` and `observe` always can;
+otherwise they run one after another on the calling thread, and `fit.parallelReason`
+says why. The draws are the same either way. `fit.trace` holds the pooled posterior
+draws keyed by variable name, `fit.byChain` the same per chain, and `fit.chains` each
+chain's own result.
+
+With `chains` absent, `sample` returns a single chain's `{ trace, acceptanceRate,
+stepSize }` synchronously.
 
 ### 4. Inspect the results
 
@@ -160,23 +160,17 @@ holds the posterior draws keyed by variable name.
 mean, standard deviation, HDI, effective sample size, and R-hat:
 
 ```javascript
-console.table(summary(result));
+console.table(summary(fit.trace));
 // param  mean   sd     hdi_lo  hdi_hi  ess   rhat
 // alpha  ~1.0   ...    ...     ...     ...   ...
 // beta   ~2.0   ...    ...     ...     ...   ...
 // sigma  ~0.5   ...    ...     ...     ...   ...
 ```
 
-You can also run several chains and pass them all to `summary` so it can compute
-R-hat across chains:
+Pass the per-chain results and `summary` computes R-hat across them:
 
 ```javascript
-const chains = sampler.sampleChains(
-  model,
-  { alpha: 0, beta: 0, sigma: 1 },
-  { chains: 4, nSamples: 1000, nWarmup: 500 }
-);
-console.table(summary(chains));
+console.table(summary(fit.chains));   // each row now includes an rhat column
 ```
 
 ### A simpler alternative: Metropolis-Hastings

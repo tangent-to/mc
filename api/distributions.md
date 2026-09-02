@@ -11,10 +11,13 @@ permalink: /api/distributions
 
 ### Distribution
 
-Defined in: [distributions/base.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L27)
+Defined in: [distributions/base.js:46](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L46)
 
 Base class for probability distributions.
-Provides common interface for all distributions.
+
+Subclasses set `this._dist` (a @tangent.to/proba distribution) in their
+constructor and implement `_params()` returning the proba parameter
+object (fields may be numbers or arrays of numbers).
 
 #### Extended by
 
@@ -34,13 +37,17 @@ Provides common interface for all distributions.
 new Distribution(name?): Distribution;
 ```
 
-Defined in: [distributions/base.js:28](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L28)
+Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L51)
+
+Create a base distribution; subclasses set `this._dist` and parameters.
 
 ###### Parameters
 
 ###### name?
 
 `string` = `'Distribution'`
+
+Name of the distribution
 
 ###### Returns
 
@@ -54,78 +61,263 @@ Defined in: [distributions/base.js:28](https://github.com/tangent-to/mc/blob/c32
 name: string;
 ```
 
-Defined in: [distributions/base.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L29)
+Defined in: [distributions/base.js:52](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L52)
 
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 #### Methods
+
+##### \_params()
+
+```ts
+_params(): Object;
+```
+
+Defined in: [distributions/base.js:60](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L60)
+
+The proba parameter object for this distribution; subclasses must implement.
+
+###### Returns
+
+`Object`
+
+proba parameter object (fields may be numbers or arrays)
+
+##### \_len()
+
+```ts
+_len(value): number;
+```
+
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
+
+Broadcast length across value and parameters (0 = all scalar).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) whose length participates in broadcasting
+
+###### Returns
+
+`number`
+
+The broadcast length (0 when every input is scalar)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
 
 ##### logProb()
 
 ```ts
-logProb(value): Tensor<Rank>;
+logProb(value): number | number[];
 ```
 
-Defined in: [distributions/base.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L38)
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
 
-Log probability density/mass function
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Value to evaluate
+Value(s) to evaluate
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Log probability
+Log probability, elementwise for arrays
+
+##### logDensity()
+
+```ts
+logDensity(_value): any;
+```
+
+Defined in: [distributions/base.js:135](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L135)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### \_value
+
+`any`
+
+###### Returns
+
+`any`
+
+scalar
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
 
 ##### pdf()
 
 ```ts
-pdf(value): Tensor<Rank>;
+pdf(value): number | number[];
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Probability density/mass function, `exp(logProb(value))`.
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) to evaluate
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Probability density/mass
+##### cdf()
+
+```ts
+cdf(value): number;
+```
+
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
+
+Cumulative distribution function (scalar parameters).
+
+###### Parameters
+
+###### value
+
+`number`
+
+###### Returns
+
+`number`
+
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/base.js:60](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L60)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the distribution
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -133,13 +325,11 @@ Sample from the distribution
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
-
-Samples
+`number` \| `number`[]
 
 ##### observe()
 
@@ -147,7 +337,7 @@ Samples
 observe(data): Distribution;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
 
 Set observed data for this distribution
 
@@ -155,7 +345,7 @@ Set observed data for this distribution
 
 ###### data
 
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
 Observed data
 
@@ -163,13 +353,47 @@ Observed data
 
 [`Distribution`](#distribution)
 
+this, for chaining
+
+##### mean()
+
+```ts
+mean(): number | number[];
+```
+
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
+
+Get the mean of the distribution
+
+###### Returns
+
+`number` \| `number`[]
+
+The mean
+
+##### variance()
+
+```ts
+variance(): number | number[];
+```
+
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
+
+Get the variance of the distribution
+
+###### Returns
+
+`number` \| `number`[]
+
+The variance
+
 ##### getParams()
 
 ```ts
 getParams(): Object;
 ```
 
-Defined in: [distributions/base.js:78](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L78)
+Defined in: [distributions/base.js:254](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L254)
 
 Get the distribution's parameters as a plain object.
 Subclasses override to expose their specific parameters.
@@ -184,9 +408,9 @@ Parameters
 
 ### Bernoulli
 
-Defined in: [distributions/bernoulli.js:7](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L7)
+Defined in: [distributions/bernoulli.js:8](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L8)
 
-Bernoulli distribution for binary outcomes
+Bernoulli distribution for binary outcomes.
 
 #### Extends
 
@@ -200,15 +424,15 @@ Bernoulli distribution for binary outcomes
 new Bernoulli(p?, name?): Bernoulli;
 ```
 
-Defined in: [distributions/bernoulli.js:20](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L20)
+Defined in: [distributions/bernoulli.js:15](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L15)
 
-Accepts either positional arguments or a single options object.
+Create a Bernoulli distribution.
 
 ###### Parameters
 
 ###### p?
 
-`number` \| `Object` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
 Probability of success in [0, 1], or an
   options object `{ p, name }`
@@ -223,16 +447,6 @@ Name of the distribution
 
 [`Bernoulli`](#bernoulli)
 
-###### Examples
-
-```ts
-new Bernoulli(0.7)
-```
-
-```ts
-new Bernoulli({ p: 0.7 })
-```
-
 ###### Overrides
 
 [`Distribution`](#distribution).[`constructor`](#constructor)
@@ -242,10 +456,10 @@ new Bernoulli({ p: 0.7 })
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -257,7 +471,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/bernoulli.js:24](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L24)
+Defined in: [distributions/bernoulli.js:19](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L19)
 
 ###### Inherited from
 
@@ -266,107 +480,249 @@ Defined in: [distributions/bernoulli.js:24](https://github.com/tangent-to/mc/blo
 ##### p
 
 ```ts
-p: Object | Tensor<Rank>;
+p: number | Object | any[];
 ```
 
-Defined in: [distributions/bernoulli.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L27)
+Defined in: [distributions/bernoulli.js:22](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L22)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/bernoulli.js:23](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L23)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Bernoulli;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Bernoulli`](#bernoulli)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/bernoulli.js:35](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L35)
-
-Log probability mass function
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate (0 or 1)
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/bernoulli.js:55](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L55)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the Bernoulli distribution
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -374,45 +730,146 @@ Sample from the Bernoulli distribution
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples (0 or 1)
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Object | Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/bernoulli.js:66](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L66)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
 Get the mean of the distribution
 
 ###### Returns
 
-`Object` \| `Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/bernoulli.js:73](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L73)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
 Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/bernoulli.js:30](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L30)
+
+The proba parameter object for this distribution.
+
+###### Returns
+
+`object`
+
+###### p
+
+```ts
+p: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/bernoulli.js:34](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L34)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -420,7 +877,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/bernoulli.js:81](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/bernoulli.js#L81)
+Defined in: [distributions/bernoulli.js:43](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/bernoulli.js#L43)
 
 Get the distribution's parameters.
 
@@ -431,7 +888,7 @@ Get the distribution's parameters.
 ###### p
 
 ```ts
-p: number;
+p: number | any[];
 ```
 
 ###### Overrides
@@ -442,9 +899,9 @@ p: number;
 
 ### Beta
 
-Defined in: [distributions/beta.js:8](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L8)
+Defined in: [distributions/beta.js:8](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L8)
 
-Beta distribution (useful for modeling probabilities)
+Beta distribution on (0, 1).
 
 #### Extends
 
@@ -461,24 +918,24 @@ new Beta(
    name?): Beta;
 ```
 
-Defined in: [distributions/beta.js:22](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L22)
+Defined in: [distributions/beta.js:16](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L16)
 
-Accepts either positional arguments or a single options object.
+Create a Beta distribution.
 
 ###### Parameters
 
 ###### alpha?
 
-`number` \| `Object` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Shape parameter (> 0), or an options
-  object `{ alpha, beta, name }`
+First shape, or an options object
+  `{ alpha, beta, name }`
 
 ###### beta?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Shape parameter (must be > 0)
+Second shape
 
 ###### name?
 
@@ -490,16 +947,6 @@ Name of the distribution
 
 [`Beta`](#beta)
 
-###### Examples
-
-```ts
-new Beta(2, 5)
-```
-
-```ts
-new Beta({ alpha: 2, beta: 5 })
-```
-
 ###### Overrides
 
 [`Distribution`](#distribution).[`constructor`](#constructor)
@@ -509,10 +956,10 @@ new Beta({ alpha: 2, beta: 5 })
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -524,7 +971,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L26)
+Defined in: [distributions/beta.js:20](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L20)
 
 ###### Inherited from
 
@@ -533,116 +980,257 @@ Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/c32
 ##### alpha
 
 ```ts
-alpha: Object | Tensor<Rank>;
+alpha: number | Object | any[];
 ```
 
-Defined in: [distributions/beta.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L30)
+Defined in: [distributions/beta.js:24](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L24)
 
 ##### beta
 
 ```ts
-beta: Tensor<Rank> | undefined;
+beta: number | any[] | undefined;
 ```
 
-Defined in: [distributions/beta.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L31)
+Defined in: [distributions/beta.js:25](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L25)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/beta.js:26](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L26)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Beta;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Beta`](#beta)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/beta.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L39)
-
-Log probability density function
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate (must be in [0, 1])
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/beta.js:69](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L69)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the beta distribution
-Uses the relationship: if X ~ Gamma(α) and Y ~ Gamma(β), then X/(X+Y) ~ Beta(α, β)
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -650,45 +1238,152 @@ Uses the relationship: if X ~ Gamma(α) and Y ~ Gamma(β), then X/(X+Y) ~ Beta(�
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/beta.js:90](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L90)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
 Get the mean of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/beta.js:97](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L97)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
 Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/beta.js:33](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L33)
+
+The proba parameter object for this distribution.
+
+###### Returns
+
+`object`
+
+###### alpha
+
+```ts
+alpha: number | any[];
+```
+
+###### beta
+
+```ts
+beta: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/beta.js:37](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L37)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -696,7 +1391,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/beta.js:110](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/beta.js#L110)
+Defined in: [distributions/beta.js:52](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/beta.js#L52)
 
 Get the distribution's parameters.
 
@@ -707,13 +1402,13 @@ Get the distribution's parameters.
 ###### alpha
 
 ```ts
-alpha: number;
+alpha: number | any[];
 ```
 
 ###### beta
 
 ```ts
-beta: number;
+beta: number | any[];
 ```
 
 ###### Overrides
@@ -724,9 +1419,10 @@ beta: number;
 
 ### Gamma
 
-Defined in: [distributions/gamma.js:8](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L8)
+Defined in: [distributions/gamma.js:9](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L9)
 
-Gamma distribution (useful for modeling positive continuous values)
+Gamma distribution (shape/rate parameterization, PyMC convention):
+mean = alpha / beta.
 
 #### Extends
 
@@ -743,24 +1439,27 @@ new Gamma(
    name?): Gamma;
 ```
 
-Defined in: [distributions/gamma.js:22](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L22)
+Defined in: [distributions/gamma.js:21](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L21)
 
-Accepts either positional arguments or a single options object.
+Shape/RATE parameterization (PyMC/Stan convention): mean = alpha / beta.
+Note this differs from R and `@tangent.to/ds`, which use shape/SCALE
+(scale = 1 / rate). A `scale` key is therefore rejected here rather than
+silently misread as a rate — pass `rate` (or `beta`) explicitly.
 
 ###### Parameters
 
 ###### alpha?
 
-`number` \| `Object` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Shape parameter (> 0), or an options
-  object `{ alpha | shape, beta | rate, name }`
+Shape, or an options object
+  `{ alpha | shape, beta | rate, name }`
 
 ###### beta?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Rate parameter (must be > 0)
+Rate (NOT scale)
 
 ###### name?
 
@@ -772,16 +1471,6 @@ Name of the distribution
 
 [`Gamma`](#gamma)
 
-###### Examples
-
-```ts
-new Gamma(2, 1)
-```
-
-```ts
-new Gamma({ shape: 2, rate: 1 })
-```
-
 ###### Overrides
 
 [`Distribution`](#distribution).[`constructor`](#constructor)
@@ -791,10 +1480,10 @@ new Gamma({ shape: 2, rate: 1 })
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -806,7 +1495,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/gamma.js:26](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L26)
+Defined in: [distributions/gamma.js:31](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L31)
 
 ###### Inherited from
 
@@ -815,115 +1504,257 @@ Defined in: [distributions/gamma.js:26](https://github.com/tangent-to/mc/blob/c3
 ##### alpha
 
 ```ts
-alpha: Object | Tensor<Rank>;
+alpha: number | Object | any[];
 ```
 
-Defined in: [distributions/gamma.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L30)
+Defined in: [distributions/gamma.js:35](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L35)
 
 ##### beta
 
 ```ts
-beta: Tensor<Rank> | undefined;
+beta: number | any[] | undefined;
 ```
 
-Defined in: [distributions/gamma.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L31)
+Defined in: [distributions/gamma.js:36](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L36)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/gamma.js:37](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L37)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Gamma;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Gamma`](#gamma)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/gamma.js:39](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L39)
-
-Log probability density function
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate (must be > 0)
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/gamma.js:75](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L75)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the gamma distribution
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -931,45 +1762,152 @@ Sample from the gamma distribution
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/gamma.js:96](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L96)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
 Get the mean of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/gamma.js:103](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L103)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
 Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/gamma.js:44](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L44)
+
+The proba parameter object for this distribution (shape/rate).
+
+###### Returns
+
+`object`
+
+###### alpha
+
+```ts
+alpha: number | any[];
+```
+
+###### beta
+
+```ts
+beta: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/gamma.js:48](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L48)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -977,7 +1915,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/gamma.js:111](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/gamma.js#L111)
+Defined in: [distributions/gamma.js:64](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/gamma.js#L64)
 
 Get the distribution's parameters.
 
@@ -988,13 +1926,13 @@ Get the distribution's parameters.
 ###### alpha
 
 ```ts
-alpha: number;
+alpha: number | any[];
 ```
 
 ###### beta
 
 ```ts
-beta: number;
+beta: number | any[];
 ```
 
 ###### Overrides
@@ -1005,23 +1943,10 @@ beta: number;
 
 ### HalfNormal
 
-Defined in: [distributions/halfnormal.js:19](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L19)
+Defined in: [distributions/halfnormal.js:10](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L10)
 
-Half-normal distribution
-
-The distribution of $|Z|$ where $Z \sim \mathcal{N}(0, \sigma^2)$; a positive
-variable concentrated near zero. Commonly used as a weakly-informative prior
-for scale / standard-deviation parameters (variance components).
-
-Probability density function (for $x \ge 0$):
-$$
-p(x \mid \sigma) = \frac{\sqrt{2}}{\sigma\sqrt{\pi}}
-  \exp\!\left(-\frac{x^2}{2\sigma^2}\right)
-$$
-
-#### See
-
-[distribution](https://en.wikipedia.org/wiki/Half-normal_distribution|Half-normal)
+Half-normal distribution on [0, Infinity) — the absolute value of a
+Normal(0, sigma^2). A standard weakly-informative prior for scales.
 
 #### Extends
 
@@ -1035,15 +1960,18 @@ $$
 new HalfNormal(sigma?, name?): HalfNormal;
 ```
 
-Defined in: [distributions/halfnormal.js:24](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L24)
+Defined in: [distributions/halfnormal.js:17](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L17)
+
+Create a half-normal distribution.
 
 ###### Parameters
 
 ###### sigma?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Scale parameter ($\sigma > 0$)
+Scale, or an options object
+  `{ sigma | sd | std | scale, name }`
 
 ###### name?
 
@@ -1064,10 +1992,10 @@ Name of the distribution
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -1079,7 +2007,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/halfnormal.js:28](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L28)
+Defined in: [distributions/halfnormal.js:21](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L21)
 
 ###### Inherited from
 
@@ -1088,114 +2016,249 @@ Defined in: [distributions/halfnormal.js:28](https://github.com/tangent-to/mc/bl
 ##### sigma
 
 ```ts
-sigma: Tensor<Rank>;
+sigma: number | Object | any[];
 ```
 
-Defined in: [distributions/halfnormal.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L31)
+Defined in: [distributions/halfnormal.js:24](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L24)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/halfnormal.js:25](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L25)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): HalfNormal;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`HalfNormal`](#halfnormal)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/halfnormal.js:47](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L47)
-
-Log probability density function.
-
-$$
-\log p(x) = \tfrac{1}{2}\log\frac{2}{\pi} - \log\sigma - \frac{x^2}{2\sigma^2},
-\quad x \ge 0
-$$
-
-Returns $-\infty$ for negative inputs.
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate ($x \ge 0$)
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability density
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/halfnormal.js:66](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L66)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the half-normal distribution: $|\sigma Z|$, $Z \sim \mathcal{N}(0,1)$.
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -1203,49 +2266,146 @@ Sample from the half-normal distribution: $|\sigma Z|$, $Z \sim \mathcal{N}(0,1)
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/halfnormal.js:78](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L78)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
-Mean of the distribution: $\sigma\sqrt{2/\pi}$.
+Get the mean of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
 The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/halfnormal.js:86](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L86)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
-Variance of the distribution: sigma^2 * (1 - 2/pi).
+Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
 The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/halfnormal.js:32](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L32)
+
+The proba parameter object for this distribution.
+
+###### Returns
+
+`object`
+
+###### sigma
+
+```ts
+sigma: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/halfnormal.js:36](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L36)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -1253,7 +2413,7 @@ The variance
 getParams(): object;
 ```
 
-Defined in: [distributions/halfnormal.js:94](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/halfnormal.js#L94)
+Defined in: [distributions/halfnormal.js:47](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/halfnormal.js#L47)
 
 Get the distribution's parameters.
 
@@ -1264,7 +2424,7 @@ Get the distribution's parameters.
 ###### sigma
 
 ```ts
-sigma: number;
+sigma: number | any[];
 ```
 
 ###### Overrides
@@ -1275,25 +2435,10 @@ sigma: number;
 
 ### Lognormal
 
-Defined in: [distributions/lognormal.js:21](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L21)
+Defined in: [distributions/lognormal.js:10](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L10)
 
-Log-normal distribution
-
-A positive random variable whose logarithm is normally distributed:
-if $\log X \sim \mathcal{N}(\mu, \sigma^2)$ then $X \sim \text{LogNormal}(\mu, \sigma)$.
-
-Probability density function (for $x > 0$):
-$$
-p(x \mid \mu, \sigma) = \frac{1}{x\,\sigma\sqrt{2\pi}}
-  \exp\!\left(-\frac{(\log x - \mu)^2}{2\sigma^2}\right)
-$$
-
-Useful as a weakly-informative prior for strictly positive quantities
-(rates, scales, plateaus).
-
-#### See
-
-[distribution](https://en.wikipedia.org/wiki/Log-normal_distribution|Log-normal)
+Log-normal distribution: if log X ~ Normal(mu, sigma^2) then
+X ~ LogNormal(mu, sigma). Parameters are on the log scale.
 
 #### Extends
 
@@ -1310,21 +2455,24 @@ new Lognormal(
    name?): Lognormal;
 ```
 
-Defined in: [distributions/lognormal.js:27](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L27)
+Defined in: [distributions/lognormal.js:18](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L18)
+
+Create a log-normal distribution (parameters on the log scale).
 
 ###### Parameters
 
 ###### mu?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Mean of the underlying normal (log-scale)
+Log-scale location, or an options object
+  `{ mu | mean, sigma | sd | std, name }`
 
 ###### sigma?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Std-dev of the underlying normal ($\sigma > 0$)
+Log-scale standard deviation
 
 ###### name?
 
@@ -1345,10 +2493,10 @@ Name of the distribution
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -1360,7 +2508,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/lognormal.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L31)
+Defined in: [distributions/lognormal.js:22](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L22)
 
 ###### Inherited from
 
@@ -1369,120 +2517,257 @@ Defined in: [distributions/lognormal.js:31](https://github.com/tangent-to/mc/blo
 ##### mu
 
 ```ts
-mu: Tensor<Rank>;
+mu: number | Object | any[];
 ```
 
-Defined in: [distributions/lognormal.js:35](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L35)
+Defined in: [distributions/lognormal.js:26](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L26)
 
 ##### sigma
 
 ```ts
-sigma: Tensor<Rank>;
+sigma: number | any[] | undefined;
 ```
 
-Defined in: [distributions/lognormal.js:36](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L36)
+Defined in: [distributions/lognormal.js:27](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L27)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/lognormal.js:28](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L28)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Lognormal;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Lognormal`](#lognormal)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/lognormal.js:50](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L50)
-
-Log probability density function.
-
-$$
-\log p(x) = -\log x - \log \sigma - \tfrac{1}{2}\log(2\pi)
-           - \frac{(\log x - \mu)^2}{2\sigma^2}, \quad x > 0
-$$
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate ($x > 0$)
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability density
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/lognormal.js:69](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L69)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the log-normal distribution: $\exp(\mu + \sigma Z)$, $Z \sim \mathcal{N}(0,1)$.
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -1490,49 +2775,152 @@ Sample from the log-normal distribution: $\exp(\mu + \sigma Z)$, $Z \sim \mathca
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/lognormal.js:81](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L81)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
-Mean of the distribution: $\exp(\mu + \sigma^2/2)$.
+Get the mean of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
 The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/lognormal.js:89](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L89)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
-Variance of the distribution: (exp(sigma^2) - 1) * exp(2*mu + sigma^2).
+Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
 The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/lognormal.js:35](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L35)
+
+The proba parameter object for this distribution.
+
+###### Returns
+
+`object`
+
+###### mu
+
+```ts
+mu: number | any[];
+```
+
+###### sigma
+
+```ts
+sigma: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/lognormal.js:39](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L39)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -1540,7 +2928,7 @@ The variance
 getParams(): object;
 ```
 
-Defined in: [distributions/lognormal.js:100](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/lognormal.js#L100)
+Defined in: [distributions/lognormal.js:50](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/lognormal.js#L50)
 
 Get the distribution's parameters.
 
@@ -1551,13 +2939,13 @@ Get the distribution's parameters.
 ###### mu
 
 ```ts
-mu: number;
+mu: number | any[];
 ```
 
 ###### sigma
 
 ```ts
-sigma: number;
+sigma: number | any[];
 ```
 
 ###### Overrides
@@ -1568,14 +2956,11 @@ sigma: number;
 
 ### Normal
 
-Defined in: [distributions/normal.js:14](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L14)
+Defined in: [distributions/normal.js:13](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L13)
 
 Normal (Gaussian) distribution
 
-Probability density function:
-$$
-p(x | \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
-$$
+$$ p(x | \mu, \sigma) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right) $$
 
 #### See
 
@@ -1596,7 +2981,7 @@ new Normal(
    name?): Normal;
 ```
 
-Defined in: [distributions/normal.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L29)
+Defined in: [distributions/normal.js:28](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L28)
 
 Accepts either positional arguments or a single options object, matching the
 dual-constructor convention of `@tangent.to/ds`.
@@ -1605,16 +2990,16 @@ dual-constructor convention of `@tangent.to/ds`.
 
 ###### mu?
 
-`number` \| `Object` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
-Mean parameter $\mu$, or an options object
-  `{ mu | mean, sigma | sd, name }`
+Mean parameter, or an options object
+  `{ mu | mean, sigma | sd | std, name }`
 
 ###### sigma?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Standard deviation parameter $\sigma > 0$
+Standard deviation, sigma > 0
 
 ###### name?
 
@@ -1645,10 +3030,10 @@ new Normal({ mean: 0, sd: 1 })
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -1660,7 +3045,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/normal.js:33](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L33)
+Defined in: [distributions/normal.js:32](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L32)
 
 ###### Inherited from
 
@@ -1669,119 +3054,257 @@ Defined in: [distributions/normal.js:33](https://github.com/tangent-to/mc/blob/c
 ##### mu
 
 ```ts
-mu: Object | Tensor<Rank>;
+mu: number | Object | any[];
 ```
 
-Defined in: [distributions/normal.js:37](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L37)
+Defined in: [distributions/normal.js:36](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L36)
 
 ##### sigma
 
 ```ts
-sigma: Tensor<Rank> | undefined;
+sigma: number | any[] | undefined;
 ```
 
-Defined in: [distributions/normal.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L38)
+Defined in: [distributions/normal.js:37](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L37)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/normal.js:38](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L38)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Normal;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Normal`](#normal)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/normal.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L51)
-
-Log probability density function
-
-$$
-\log p(x | \mu, \sigma) = -\frac{1}{2}\log(2\pi) - \log(\sigma) - \frac{(x-\mu)^2}{2\sigma^2}
-$$
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/normal.js:71](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L71)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the normal distribution
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -1789,45 +3312,152 @@ Sample from the normal distribution
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Object | Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/normal.js:82](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L82)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
 Get the mean of the distribution
 
 ###### Returns
 
-`Object` \| `Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/normal.js:89](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L89)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
 Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/normal.js:45](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L45)
+
+The proba parameter object for this distribution.
+
+###### Returns
+
+`object`
+
+###### mu
+
+```ts
+mu: number | any[];
+```
+
+###### sigma
+
+```ts
+sigma: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/normal.js:49](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L49)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -1835,7 +3465,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/normal.js:97](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/normal.js#L97)
+Defined in: [distributions/normal.js:61](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/normal.js#L61)
 
 Get the distribution's parameters.
 
@@ -1846,13 +3476,13 @@ Get the distribution's parameters.
 ###### mu
 
 ```ts
-mu: number;
+mu: number | any[];
 ```
 
 ###### sigma
 
 ```ts
-sigma: number;
+sigma: number | any[];
 ```
 
 ###### Overrides
@@ -1863,9 +3493,9 @@ sigma: number;
 
 ### Uniform
 
-Defined in: [distributions/uniform.js:7](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L7)
+Defined in: [distributions/uniform.js:8](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L8)
 
-Uniform distribution
+Continuous uniform distribution on [lower, upper].
 
 #### Extends
 
@@ -1882,22 +3512,22 @@ new Uniform(
    name?): Uniform;
 ```
 
-Defined in: [distributions/uniform.js:21](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L21)
+Defined in: [distributions/uniform.js:16](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L16)
 
-Accepts either positional arguments or a single options object.
+Create a continuous uniform distribution on [lower, upper].
 
 ###### Parameters
 
 ###### lower?
 
-`number` \| `Object` \| `Tensor`\<`Rank`\>
+`number` \| `Object` \| `any`[]
 
 Lower bound, or an options object
   `{ lower | min, upper | max, name }`
 
 ###### upper?
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
 Upper bound
 
@@ -1911,16 +3541,6 @@ Name of the distribution
 
 [`Uniform`](#uniform)
 
-###### Examples
-
-```ts
-new Uniform(0, 1)
-```
-
-```ts
-new Uniform({ min: 0, max: 1 })
-```
-
 ###### Overrides
 
 [`Distribution`](#distribution).[`constructor`](#constructor)
@@ -1930,10 +3550,10 @@ new Uniform({ min: 0, max: 1 })
 ##### observed
 
 ```ts
-observed: Tensor<Rank> | null;
+observed: any;
 ```
 
-Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L30)
+Defined in: [distributions/base.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L53)
 
 ###### Inherited from
 
@@ -1945,7 +3565,7 @@ Defined in: [distributions/base.js:30](https://github.com/tangent-to/mc/blob/c32
 name: any;
 ```
 
-Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L25)
+Defined in: [distributions/uniform.js:20](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L20)
 
 ###### Inherited from
 
@@ -1954,115 +3574,257 @@ Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/
 ##### lower
 
 ```ts
-lower: Object | Tensor<Rank>;
+lower: number | Object | any[];
 ```
 
-Defined in: [distributions/uniform.js:29](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L29)
+Defined in: [distributions/uniform.js:24](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L24)
 
 ##### upper
 
 ```ts
-upper: Tensor<Rank> | undefined;
+upper: number | any[] | undefined;
 ```
 
-Defined in: [distributions/uniform.js:30](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L30)
+Defined in: [distributions/uniform.js:25](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L25)
+
+##### \_dist
+
+```ts
+_dist: any;
+```
+
+Defined in: [distributions/uniform.js:26](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L26)
 
 #### Methods
 
-##### pdf()
+##### \_len()
 
 ```ts
-pdf(value): Tensor<Rank>;
+_len(value): number;
 ```
 
-Defined in: [distributions/base.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L51)
+Defined in: [distributions/base.js:69](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L69)
 
-Probability density/mass function
-
-Computed as `exp(logProb(value))`. Provided for parity with the
-`@tangent.to/ds` distribution interface (`pdf`/`cdf`/`quantile`).
+Broadcast length across value and parameters (0 = all scalar).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
+`number` \| `any`[]
 
-Value to evaluate
+Value(s) whose length participates in broadcasting
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Probability density/mass
+The broadcast length (0 when every input is scalar)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_len`](#_len)
+
+##### \_paramsAt()
+
+```ts
+_paramsAt(i): Object;
+```
+
+Defined in: [distributions/base.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L82)
+
+The proba parameter object with each array parameter indexed at `i`.
+
+###### Parameters
+
+###### i
+
+`number`
+
+Broadcast index
+
+###### Returns
+
+`Object`
+
+Per-element parameter object (scalars passed through)
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`_paramsAt`](#_paramsat)
+
+##### logProb()
+
+```ts
+logProb(value): number | number[];
+```
+
+Defined in: [distributions/base.js:97](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L97)
+
+Log probability density/mass function. Broadcasts over array values
+and/or array parameters.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+Log probability, elementwise for arrays
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logProb`](#logprob)
+
+##### logpdf()
+
+```ts
+logpdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:150](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L150)
+
+Alias for [Distribution#logProb](#logprob), matching the `@tangent.to/proba`
+distribution contract (which names the method `logpdf`). Lets code written
+against proba's distributions work unchanged on mc's.
+
+###### Parameters
+
+###### value
+
+`number` \| `Object` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`logpdf`](#logpdf)
+
+##### dlogProbDx()
+
+```ts
+dlogProbDx(value): number | number[];
+```
+
+Defined in: [distributions/base.js:162](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L162)
+
+Derivative of logProb with respect to the value, elementwise.
+Used by Model.logProbAndGradient for analytic prior gradients.
+Discrete distributions return 0 (no dx in their gradient contract).
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) at which to differentiate
+
+###### Returns
+
+`number` \| `number`[]
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`dlogProbDx`](#dlogprobdx)
+
+##### pdf()
+
+```ts
+pdf(value): number | number[];
+```
+
+Defined in: [distributions/base.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L182)
+
+Probability density/mass function, `exp(logProb(value))`.
+
+###### Parameters
+
+###### value
+
+`number` \| `any`[]
+
+Value(s) to evaluate
+
+###### Returns
+
+`number` \| `number`[]
 
 ###### Inherited from
 
 [`Distribution`](#distribution).[`pdf`](#pdf)
 
-##### observe()
+##### cdf()
 
 ```ts
-observe(data): Uniform;
+cdf(value): number;
 ```
 
-Defined in: [distributions/base.js:68](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/base.js#L68)
+Defined in: [distributions/base.js:192](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L192)
 
-Set observed data for this distribution
-
-###### Parameters
-
-###### data
-
-`number` \| `any`[] \| `Tensor`\<`Rank`\>
-
-Observed data
-
-###### Returns
-
-[`Uniform`](#uniform)
-
-###### Inherited from
-
-[`Distribution`](#distribution).[`observe`](#observe)
-
-##### logProb()
-
-```ts
-logProb(value): Tensor<Rank>;
-```
-
-Defined in: [distributions/uniform.js:38](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L38)
-
-Log probability density function
+Cumulative distribution function (scalar parameters).
 
 ###### Parameters
 
 ###### value
 
-`number` \| `Tensor`\<`Rank`\>
-
-Value to evaluate
+`number`
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number`
 
-Log probability
+###### Inherited from
 
-###### Overrides
+[`Distribution`](#distribution).[`cdf`](#cdf)
 
-[`Distribution`](#distribution).[`logProb`](#logprob)
+##### quantile()
+
+```ts
+quantile(p): number;
+```
+
+Defined in: [distributions/base.js:201](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L201)
+
+Quantile (inverse cdf) function (scalar parameters).
+
+###### Parameters
+
+###### p
+
+`number`
+
+Probability in [0, 1]
+
+###### Returns
+
+`number`
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`quantile`](#quantile)
 
 ##### sample()
 
 ```ts
-sample(shape?): Tensor<Rank>;
+sample(shape?): number | number[];
 ```
 
-Defined in: [distributions/uniform.js:60](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L60)
+Defined in: [distributions/base.js:213](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L213)
 
-Sample from the uniform distribution
+Sample from the distribution using the package RNG (see setRandomSeed).
+`sample()` / `sample([])` return a number; `sample(n)` / `sample([n])`
+return an Array of n draws.
 
 ###### Parameters
 
@@ -2070,45 +3832,152 @@ Sample from the uniform distribution
 
 `number` \| `number`[]
 
-Shape of samples to generate
+Number of samples
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
 
-Samples
-
-###### Overrides
+###### Inherited from
 
 [`Distribution`](#distribution).[`sample`](#sample)
+
+##### observe()
+
+```ts
+observe(data): Distribution;
+```
+
+Defined in: [distributions/base.js:224](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L224)
+
+Set observed data for this distribution
+
+###### Parameters
+
+###### data
+
+`number` \| `any`[]
+
+Observed data
+
+###### Returns
+
+[`Distribution`](#distribution)
+
+this, for chaining
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`observe`](#observe)
 
 ##### mean()
 
 ```ts
-mean(): Tensor<Rank>;
+mean(): number | number[];
 ```
 
-Defined in: [distributions/uniform.js:72](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L72)
+Defined in: [distributions/base.js:233](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L233)
 
 Get the mean of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The mean
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`mean`](#mean)
 
 ##### variance()
 
 ```ts
-variance(): Tensor<Rank>;
+variance(): number | number[];
 ```
 
-Defined in: [distributions/uniform.js:79](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L79)
+Defined in: [distributions/base.js:243](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/base.js#L243)
 
 Get the variance of the distribution
 
 ###### Returns
 
-`Tensor`\<`Rank`\>
+`number` \| `number`[]
+
+The variance
+
+###### Inherited from
+
+[`Distribution`](#distribution).[`variance`](#variance)
+
+##### \_params()
+
+```ts
+_params(): object;
+```
+
+Defined in: [distributions/uniform.js:33](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L33)
+
+The proba parameter object for this distribution (proba `{low, high}` keys).
+
+###### Returns
+
+`object`
+
+###### low
+
+```ts
+low: number | any[];
+```
+
+###### high
+
+```ts
+high: number | any[];
+```
+
+###### Overrides
+
+[`Distribution`](#distribution).[`_params`](#_params)
+
+##### logDensity()
+
+```ts
+logDensity(value): any;
+```
+
+Defined in: [distributions/uniform.js:37](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L37)
+
+The log-density as a differentiable expression, SUMMED over elements.
+
+Where [Distribution#logProb](#logprob) takes plain numbers and returns the
+elementwise density, this takes parameters that may be grad `Var`s, built
+from the model's free variables, and returns one scalar `Var`: the total
+log-density of `value` under this distribution, differentiable in every
+parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
+likelihood is derived from the distribution rather than written by hand.
+
+The seven built-in distributions implement it. A subclass that does not is
+still a valid prior and a valid `logProb`; it is simply not differentiable,
+and `observe` will say so.
+
+###### Parameters
+
+###### value
+
+`any`
+
+observed value(s), plain numbers
+
+###### Returns
+
+`any`
+
+scalar
+
+###### Overrides
+
+[`Distribution`](#distribution).[`logDensity`](#logdensity)
 
 ##### getParams()
 
@@ -2116,7 +3985,7 @@ Get the variance of the distribution
 getParams(): object;
 ```
 
-Defined in: [distributions/uniform.js:88](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/distributions/uniform.js#L88)
+Defined in: [distributions/uniform.js:54](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/distributions/uniform.js#L54)
 
 Get the distribution's parameters.
 
@@ -2127,13 +3996,13 @@ Get the distribution's parameters.
 ###### lower
 
 ```ts
-lower: number;
+lower: number | any[];
 ```
 
 ###### upper
 
 ```ts
-upper: number;
+upper: number | any[];
 ```
 
 ###### Overrides

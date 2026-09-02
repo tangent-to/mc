@@ -6,7 +6,7 @@ mc is fully compatible with Observable notebooks, allowing you to perform Bayesi
 
 ### 1. Import mc
 
-In an Observable cell, you can import mc directly from npm. The jsDelivr `+esm` endpoint auto-resolves the `@tensorflow/tfjs` peer dependency, so a single import works:
+In an Observable cell, you can import mc directly from npm. A single import works — mc has no peer dependency to resolve:
 
 ```javascript
 mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
@@ -77,25 +77,17 @@ Plot.plot({
 
 ## Browser-Specific Considerations
 
-### Memory Management
+### Memory
 
-TensorFlow.js in the browser requires manual memory management. Use `tf.tidy()` or dispose tensors:
+Nothing to manage. mc computes on plain numbers and arrays, so there are no tensors to
+dispose and no `tf.tidy()` to wrap anything in — ordinary garbage collection applies.
 
-```javascript
-// The samplers already use tf.tidy() internally,
-// but be mindful when creating custom operations
-```
+A long run's memory is dominated by the trace itself: one number per draw per scalar
+parameter, plus the vector parameters. Thin the chain (`{ thin: 5 }`) if a browser tab
+needs to hold a very long one.
 
-`@tensorflow/tfjs` is a peer dependency and is not bundled into mc; in Observable jsDelivr's `+esm` endpoint auto-resolves it. mc also re-exports the shared instance as `tf`:
-
-```javascript
-{
-  const { tf } = await import("@tangent.to/mc");
-  return tf;
-}
-```
-
-There is a single browser-first build that runs on the tfjs CPU/WebGL backend everywhere.
+There is a single browser-first build, identical in Observable, the browser, Node and
+Deno.
 
 ### Performance
 

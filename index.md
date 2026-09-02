@@ -2,7 +2,7 @@
 layout: home
 title: Home
 nav_order: 1
-description: "A PyMC-inspired Markov Chain Monte Carlo library for Bayesian inference in JavaScript, built on TensorFlow.js."
+description: "A PyMC-inspired Markov Chain Monte Carlo library for Bayesian inference in JavaScript, running on plain numbers and arrays."
 permalink: /
 ---
 
@@ -21,35 +21,46 @@ directed acyclic graphs and fit them with Markov Chain Monte Carlo.
 `@tangent.to/mc` brings PyMC-style Bayesian modelling to JavaScript. You describe a
 model by declaring prior distributions and a likelihood, then draw posterior samples
 with one of several MCMC samplers - all running the same in Node.js, the browser,
-Deno, and Observable. It is built on [TensorFlow.js](https://www.tensorflow.org/js)
-for tensor math and automatic differentiation (used by the gradient-based samplers).
+Deno, and Observable. It runs on plain numbers and arrays, with analytic prior
+gradients from [proba](https://github.com/tangent-to/proba) and reverse-mode autodiff
+from [grad](https://github.com/tangent-to/grad) for the gradient-based samplers.
 
 ## Quick example
 
-Estimate the mean of some noisy data with a Normal prior, a Normal likelihood, and
-Metropolis-Hastings. No install and no build step - import straight from a CDN and it
-runs the same in the browser, an Observable cell, or Deno:
+Estimate the mean and spread of some noisy data with NUTS, four chains. No install
+and no build step - import straight from a CDN and it runs the same in the browser,
+an Observable cell, or Deno:
 
 ```javascript
-import { Model, Normal, MetropolisHastings, printSummary }
+import { Model, Normal, HalfNormal, NUTS, printSummary }
   from 'https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm';
 
 const data = [4.9, 5.2, 4.7, 5.5, 5.1, 4.8];
 
 const model = new Model('mean_estimate');
-model.addVariable('mu', new Normal({ mean: 0, sd: 10, name: 'mu' }));
-model.potential('likelihood', (p) => new Normal(p.mu, 1).logProb(data));
+model.addVariable('mu', new Normal(0, 10));
+model.addVariable('sigma', new HalfNormal(2));
+model.observe('y', (v) => new Normal(v.mu, v.sigma), data);
 
-const trace = new MetropolisHastings({ proposalStd: 0.4 })
-  .sample(model, { mu: 0 }, { nSamples: 2000, burnIn: 1000 });
+const fit = await new NUTS()
+  .sample(model, { mu: 0, sigma: 1 }, { chains: 4, nSamples: 1000, nWarmup: 500 });
 
-printSummary(trace);
+printSummary(fit.trace);
 ```
+
+The likelihood and its exact gradient are derived from the Normal, `sigma` stays
+positive through a transform the sampler applies, and the four chains run on worker
+threads where the runtime allows and in series where it does not, with the same draws
+either way.
 
 ## Features
 
-- **PyMC-like DAG models** - connect prior distributions and likelihood terms into a
-  directed acyclic graph with `Model`, `addVariable`, and `potential`.
+- **PyMC-like models** - priors with `addVariable`, an observed variable with
+  `observe`, and the likelihood, its gradient and every transform derived from the
+  distributions. A term no distribution supplies can still be written directly, with
+  `autoPotential` or `potential`.
+- **Chains where they fit** - `sample(model, init, { chains: 4 })` runs on worker
+  threads when it can and on the calling thread when it cannot, with identical draws.
 - **A library of distributions** - Normal, Uniform, Beta, Gamma, Bernoulli,
   Lognormal, and HalfNormal.
 - **Multiple MCMC samplers** - Metropolis-Hastings, Hamiltonian Monte Carlo, NUTS,
@@ -59,7 +70,7 @@ printSummary(trace);
 - **Visualization specs** - trace, posterior, autocorrelation, pair, forest, and
   rank plots ready for Observable Plot.
 - **Runs everywhere** - a single browser-first build for Node.js, the browser, Deno,
-  and Observable, with `@tensorflow/tfjs` as a shared peer dependency.
+  and Observable. No tensor library, no peer dependency, no backend to select.
 
 ## Where to next
 

@@ -11,7 +11,7 @@ permalink: /api/samplers
 
 ### HMC
 
-Defined in: [samplers/hmc-vector.js:22](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L22)
+Defined in: [samplers/hmc-vector.js:24](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L24)
 
 Vector-aware Hamiltonian Monte Carlo.
 
@@ -41,7 +41,9 @@ const { trace } = hmc.sample(model, { slope: 0, intercept: 0, sigma: 1 },
 new HMC(opts?): HMC;
 ```
 
-Defined in: [samplers/hmc-vector.js:31](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L31)
+Defined in: [samplers/hmc-vector.js:34](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L34)
+
+Create a vector-aware HMC sampler.
 
 ###### Parameters
 
@@ -89,7 +91,7 @@ Optional RNG seed for reproducibility.
 stepSize: number;
 ```
 
-Defined in: [samplers/hmc-vector.js:32](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L32)
+Defined in: [samplers/hmc-vector.js:35](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L35)
 
 ##### nSteps
 
@@ -97,7 +99,7 @@ Defined in: [samplers/hmc-vector.js:32](https://github.com/tangent-to/mc/blob/c3
 nSteps: number;
 ```
 
-Defined in: [samplers/hmc-vector.js:33](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L33)
+Defined in: [samplers/hmc-vector.js:36](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L36)
 
 ##### targetAccept
 
@@ -105,7 +107,7 @@ Defined in: [samplers/hmc-vector.js:33](https://github.com/tangent-to/mc/blob/c3
 targetAccept: number;
 ```
 
-Defined in: [samplers/hmc-vector.js:34](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L34)
+Defined in: [samplers/hmc-vector.js:37](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L37)
 
 ##### adapt
 
@@ -113,7 +115,7 @@ Defined in: [samplers/hmc-vector.js:34](https://github.com/tangent-to/mc/blob/c3
 adapt: boolean;
 ```
 
-Defined in: [samplers/hmc-vector.js:35](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L35)
+Defined in: [samplers/hmc-vector.js:38](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L38)
 
 ##### seed
 
@@ -121,68 +123,23 @@ Defined in: [samplers/hmc-vector.js:35](https://github.com/tangent-to/mc/blob/c3
 seed: number | undefined;
 ```
 
-Defined in: [samplers/hmc-vector.js:36](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L36)
+Defined in: [samplers/hmc-vector.js:39](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L39)
 
 #### Methods
 
-##### sample()
+##### getParams()
 
 ```ts
-sample(
-   model, 
-   initialValues, 
-   opts?): object;
+getParams(): object;
 ```
 
-Defined in: [samplers/hmc-vector.js:52](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L52)
+Defined in: [samplers/hmc-vector.js:56](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L56)
 
-Run a single chain.
-
-###### Parameters
-
-###### model
-
-`Model`
-
-###### initialValues
-
-`Object`
-
-{name: number | number[]} starting point.
-
-###### opts?
-
-###### nSamples?
-
-`number` = `1000`
-
-###### nWarmup?
-
-`number` = `500`
-
-###### thin?
-
-`number` = `1`
-
-###### progress?
-
-`boolean` = `false`
+The constructor options, so a worker can rebuild this sampler.
 
 ###### Returns
 
 `object`
-
-###### trace
-
-```ts
-trace: Object;
-```
-
-###### acceptanceRate
-
-```ts
-acceptanceRate: number;
-```
 
 ###### stepSize
 
@@ -190,17 +147,67 @@ acceptanceRate: number;
 stepSize: number;
 ```
 
-###### divergences
+###### nSteps
 
 ```ts
-divergences: number;
+nSteps: number;
 ```
 
-###### specs
+###### targetAccept
 
 ```ts
-specs: any[];
+targetAccept: number;
 ```
+
+###### adapt
+
+```ts
+adapt: boolean;
+```
+
+##### sample()
+
+```ts
+sample(
+   userModel, 
+   userInitialValues, 
+   options?): 
+  | Promise<Object>
+  | {
+  trace: {
+  };
+  acceptanceRate: number;
+  stepSize: number;
+  divergences: number;
+  specs: any;
+};
+```
+
+Defined in: [samplers/hmc-vector.js:60](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L60)
+
+###### Parameters
+
+###### userModel
+
+`any`
+
+###### userInitialValues
+
+`any`
+
+###### options?
+
+###### Returns
+
+  \| `Promise`\<`Object`\>
+  \| \{
+  `trace`: \{
+  \};
+  `acceptanceRate`: `number`;
+  `stepSize`: `number`;
+  `divergences`: `number`;
+  `specs`: `any`;
+\}
 
 ##### sampleChains()
 
@@ -211,7 +218,7 @@ sampleChains(
    opts?): any[];
 ```
 
-Defined in: [samplers/hmc-vector.js:203](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L203)
+Defined in: [samplers/hmc-vector.js:217](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L217)
 
 Run several independent chains (sequentially) from (optionally) jittered
 starting points. Returns an array of single-chain results, ready for
@@ -246,7 +253,7 @@ per-chain results
 
 ### HamiltonianMC
 
-Defined in: [samplers/hmc.js:24](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L24)
+Defined in: [samplers/hmc.js:26](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L26)
 
 Hamiltonian Monte Carlo (HMC) sampler
 
@@ -276,7 +283,7 @@ where $\theta$ is position (parameters), $p$ is momentum.
 new HamiltonianMC(stepSize?, nSteps?): HamiltonianMC;
 ```
 
-Defined in: [samplers/hmc.js:37](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L37)
+Defined in: [samplers/hmc.js:39](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L39)
 
 Accepts either positional arguments or a single options object.
 
@@ -317,7 +324,7 @@ new HamiltonianMC({ stepSize: 0.01, nSteps: 10 })
 stepSize: number | Object;
 ```
 
-Defined in: [samplers/hmc.js:43](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L43)
+Defined in: [samplers/hmc.js:45](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L45)
 
 ##### nSteps
 
@@ -325,7 +332,7 @@ Defined in: [samplers/hmc.js:43](https://github.com/tangent-to/mc/blob/c32ffd3ca
 nSteps: number | undefined;
 ```
 
-Defined in: [samplers/hmc.js:44](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L44)
+Defined in: [samplers/hmc.js:46](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L46)
 
 #### Methods
 
@@ -335,7 +342,7 @@ Defined in: [samplers/hmc.js:44](https://github.com/tangent-to/mc/blob/c32ffd3ca
 getParams(): object;
 ```
 
-Defined in: [samplers/hmc.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L51)
+Defined in: [samplers/hmc.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L53)
 
 Get the sampler's configuration.
 
@@ -364,7 +371,7 @@ leapfrog(
    model): Object;
 ```
 
-Defined in: [samplers/hmc.js:62](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L62)
+Defined in: [samplers/hmc.js:64](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L64)
 
 Leapfrog integrator for Hamiltonian dynamics
 
@@ -403,7 +410,7 @@ hamiltonian(
    model): number;
 ```
 
-Defined in: [samplers/hmc.js:126](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L126)
+Defined in: [samplers/hmc.js:115](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L115)
 
 Compute Hamiltonian (total energy)
 
@@ -437,14 +444,14 @@ Hamiltonian value
 
 ```ts
 sample(
-   model, 
-   initialValues, 
+   userModel, 
+   userInitialValues, 
    nSamples?, 
    burnIn?, 
    thin?): Object;
 ```
 
-Defined in: [samplers/hmc.js:153](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc.js#L153)
+Defined in: [samplers/hmc.js:143](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc.js#L143)
 
 Run HMC sampling.
 
@@ -455,17 +462,13 @@ object's fields.
 
 ###### Parameters
 
-###### model
+###### userModel
 
-`Model`
+`any`
 
-The probabilistic model
+###### userInitialValues
 
-###### initialValues
-
-`Object`
-
-Initial parameter values
+`any`
 
 ###### nSamples?
 
@@ -511,7 +514,7 @@ hmc.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
 
 ### MetropolisHastings
 
-Defined in: [samplers/metropolis.js:21](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L21)
+Defined in: [samplers/metropolis.js:22](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L22)
 
 Metropolis-Hastings MCMC sampler
 
@@ -538,7 +541,7 @@ $$
 new MetropolisHastings(proposalStd?): MetropolisHastings;
 ```
 
-Defined in: [samplers/metropolis.js:33](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L33)
+Defined in: [samplers/metropolis.js:34](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L34)
 
 Accepts either a positional argument or a single options object.
 
@@ -573,7 +576,7 @@ new MetropolisHastings({ proposalStd: 0.5 })
 proposalStd: number | Object;
 ```
 
-Defined in: [samplers/metropolis.js:37](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L37)
+Defined in: [samplers/metropolis.js:38](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L38)
 
 #### Methods
 
@@ -583,7 +586,7 @@ Defined in: [samplers/metropolis.js:37](https://github.com/tangent-to/mc/blob/c3
 getParams(): object;
 ```
 
-Defined in: [samplers/metropolis.js:44](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L44)
+Defined in: [samplers/metropolis.js:45](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L45)
 
 Get the sampler's configuration.
 
@@ -608,7 +611,7 @@ sample(
    thin?): Object;
 ```
 
-Defined in: [samplers/metropolis.js:71](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L71)
+Defined in: [samplers/metropolis.js:73](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L73)
 
 Run Metropolis-Hastings sampling.
 
@@ -677,7 +680,7 @@ mh.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
 tuneProposal(currentAcceptanceRate): number;
 ```
 
-Defined in: [samplers/metropolis.js:145](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/metropolis.js#L145)
+Defined in: [samplers/metropolis.js:157](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/metropolis.js#L157)
 
 Tune the proposal standard deviation to achieve target acceptance rate
 
@@ -699,7 +702,7 @@ New proposal standard deviation
 
 ### NUTS
 
-Defined in: [samplers/nuts.js:28](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L28)
+Defined in: [samplers/nuts.js:30](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L30)
 
 No-U-Turn Sampler (NUTS)
 
@@ -736,7 +739,7 @@ new NUTS(
    targetAcceptance?): NUTS;
 ```
 
-Defined in: [samplers/nuts.js:42](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L42)
+Defined in: [samplers/nuts.js:44](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L44)
 
 Accepts either positional arguments or a single options object.
 
@@ -783,7 +786,7 @@ new NUTS({ stepSize: 0.01, maxTreeDepth: 10, targetAcceptance: 0.8 })
 stepSize: number | Object;
 ```
 
-Defined in: [samplers/nuts.js:49](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L49)
+Defined in: [samplers/nuts.js:51](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L51)
 
 ##### maxTreeDepth
 
@@ -791,7 +794,7 @@ Defined in: [samplers/nuts.js:49](https://github.com/tangent-to/mc/blob/c32ffd3c
 maxTreeDepth: number | undefined;
 ```
 
-Defined in: [samplers/nuts.js:50](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L50)
+Defined in: [samplers/nuts.js:52](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L52)
 
 ##### targetAcceptance
 
@@ -799,7 +802,7 @@ Defined in: [samplers/nuts.js:50](https://github.com/tangent-to/mc/blob/c32ffd3c
 targetAcceptance: number | undefined;
 ```
 
-Defined in: [samplers/nuts.js:51](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L51)
+Defined in: [samplers/nuts.js:53](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L53)
 
 ##### mu
 
@@ -807,7 +810,7 @@ Defined in: [samplers/nuts.js:51](https://github.com/tangent-to/mc/blob/c32ffd3c
 mu: number;
 ```
 
-Defined in: [samplers/nuts.js:54](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L54)
+Defined in: [samplers/nuts.js:56](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L56)
 
 ##### gamma
 
@@ -815,7 +818,7 @@ Defined in: [samplers/nuts.js:54](https://github.com/tangent-to/mc/blob/c32ffd3c
 gamma: number;
 ```
 
-Defined in: [samplers/nuts.js:55](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L55)
+Defined in: [samplers/nuts.js:57](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L57)
 
 ##### t0
 
@@ -823,7 +826,7 @@ Defined in: [samplers/nuts.js:55](https://github.com/tangent-to/mc/blob/c32ffd3c
 t0: number;
 ```
 
-Defined in: [samplers/nuts.js:56](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L56)
+Defined in: [samplers/nuts.js:58](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L58)
 
 ##### kappa
 
@@ -831,7 +834,7 @@ Defined in: [samplers/nuts.js:56](https://github.com/tangent-to/mc/blob/c32ffd3c
 kappa: number;
 ```
 
-Defined in: [samplers/nuts.js:57](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L57)
+Defined in: [samplers/nuts.js:59](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L59)
 
 #### Methods
 
@@ -841,7 +844,7 @@ Defined in: [samplers/nuts.js:57](https://github.com/tangent-to/mc/blob/c32ffd3c
 getParams(): object;
 ```
 
-Defined in: [samplers/nuts.js:64](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L64)
+Defined in: [samplers/nuts.js:66](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L66)
 
 Get the sampler's configuration.
 
@@ -877,7 +880,7 @@ leapfrog(
    model): Object;
 ```
 
-Defined in: [samplers/nuts.js:80](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L80)
+Defined in: [samplers/nuts.js:82](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L82)
 
 Single leapfrog step
 
@@ -913,6 +916,91 @@ The probabilistic model
 
 New position and momentum
 
+##### leapfrogStep()
+
+```ts
+leapfrogStep(
+   position, 
+   momentum, 
+   startGrad, 
+   stepSize, 
+   model): object;
+```
+
+Defined in: [samplers/nuts.js:135](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L135)
+
+Single leapfrog step that REUSES the start gradient and computes the
+endpoint gradient and log-probability in one combined pass.
+
+The start-of-step gradient is the previous step's endpoint gradient, so
+threading it along the trajectory avoids recomputing `gradOf(position)`
+that the previous step already produced. The endpoint's potential value is
+needed for the Hamiltonian anyway, so `logProbAndGradient` fetches value and
+gradient together instead of a separate gradient pass plus a `logProb` pass.
+
+###### Parameters
+
+###### position
+
+`Object`
+
+Current position (parameters)
+
+###### momentum
+
+`Object`
+
+Current momentum
+
+###### startGrad
+
+`Object`
+
+Gradient of the log-posterior at `position`
+
+###### stepSize
+
+`number`
+
+Signed step size for this step
+
+###### model
+
+`Model`
+
+The probabilistic model
+
+###### Returns
+
+`object`
+
+New position/momentum, the endpoint gradient (to thread onward), and the
+  endpoint log-probability.
+
+###### position
+
+```ts
+position: Object;
+```
+
+###### momentum
+
+```ts
+momentum: Object;
+```
+
+###### grad
+
+```ts
+grad: Object;
+```
+
+###### logProb
+
+```ts
+logProb: number;
+```
+
 ##### hamiltonian()
 
 ```ts
@@ -922,7 +1010,7 @@ hamiltonian(
    model): number;
 ```
 
-Defined in: [samplers/nuts.js:132](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L132)
+Defined in: [samplers/nuts.js:170](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L170)
 
 Compute Hamiltonian (total energy)
 
@@ -962,7 +1050,7 @@ isUTurn(
    momentumPlus): boolean;
 ```
 
-Defined in: [samplers/nuts.js:144](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L144)
+Defined in: [samplers/nuts.js:182](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L182)
 
 Check if trajectory is making a U-turn
 
@@ -1004,15 +1092,16 @@ True if trajectory is making a U-turn
 buildTree(
    position, 
    momentum, 
-   slice, 
+   logSlice, 
    direction, 
    depth, 
    stepSize, 
    model, 
-   H0): Object;
+   H0, 
+   startGrad?): Object;
 ```
 
-Defined in: [samplers/nuts.js:177](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L177)
+Defined in: [samplers/nuts.js:214](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L214)
 
 Build tree recursively (doubling procedure)
 
@@ -1030,11 +1119,12 @@ Starting position
 
 Starting momentum
 
-###### slice
+###### logSlice
 
 `number`
 
-Slice variable for acceptance
+LOG slice variable log(u) for the membership test
+  (see [NUTS#sample](#sample-3)); a state is in the slice iff `logSlice ≤ -H`
 
 ###### direction
 
@@ -1066,85 +1156,76 @@ The probabilistic model
 
 Initial Hamiltonian
 
+###### startGrad?
+
+`Object`
+
+Gradient of the log-posterior at `position`
+  (the previous step's endpoint gradient). Computed on demand when omitted.
+
 ###### Returns
 
 `Object`
 
-Tree information
+Tree information (also carries `gradMinus`/`gradPlus`, the
+  endpoint gradients, so the caller can thread them onward)
 
 ##### sample()
 
 ```ts
 sample(
-   model, 
-   initialValues, 
+   userModel, 
+   userInitialValues, 
    nSamples?, 
    nWarmup?, 
-   thin?): Object;
+   thin?): 
+  | Promise<Object>
+  | {
+  trace: Object;
+  acceptanceRate: number;
+  nSamples: number;
+  stepSize: number | Object;
+};
 ```
 
-Defined in: [samplers/nuts.js:278](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/nuts.js#L278)
+Defined in: [samplers/nuts.js:344](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/nuts.js#L344)
 
-Run NUTS sampling.
-
-The sampling controls may be passed positionally or as a single options
-object. When an options object is supplied as the third argument, the
-`nWarmup` and `thin` positional arguments are ignored in favour of the
-object's fields.
+`sample(model, init, { chains: 4, ... })` runs four chains and returns a
+Promise of `{ trace, byChain, chains, acceptanceRates, seeds, parallel,
+parallelReason }`, pooled and per chain. With one chain, or the positional
+form, it returns the trace synchronously as before.
 
 ###### Parameters
 
-###### model
+###### userModel
 
-`Model`
+`any`
 
-The probabilistic model
+###### userInitialValues
 
-###### initialValues
-
-`Object`
-
-Initial parameter values
+`any`
 
 ###### nSamples?
 
-`number` \| `Object`
-
-Number of samples, or an options object
-
-`number`
-
-***
-
-`Object`
+`number` = `1000`
 
 ###### nWarmup?
 
 `number` = `500`
 
-Number of warmup samples for step-size adaptation (positional form)
-
 ###### thin?
 
 `number` = `1`
 
-Thinning interval (positional form)
-
 ###### Returns
 
-`Object`
-
-Trace object with samples and diagnostics
-
-###### Examples
-
-```ts
-nuts.sample(model, { mu: 0 }, 1000, 500, 1)
-```
-
-```ts
-nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
-```
+  \| `Promise`\<`Object`\>
+  \| \{
+  `trace`: `Object`;
+  `acceptanceRate`: `number`;
+  `nSamples`: `number`;
+  `stepSize`: `number` \| `Object`;
+\}
 
 ## Functions
 
@@ -1154,7 +1235,7 @@ nuts.sample(model, { mu: 0 }, { nSamples: 1000, nWarmup: 500, thin: 1 })
 function summary(chainsOrResults, opts?): Object[];
 ```
 
-Defined in: [samplers/hmc-vector.js:224](https://github.com/tangent-to/mc/blob/c32ffd3caf22b47cd6803332f7f477969f9f6e95/src/samplers/hmc-vector.js#L224)
+Defined in: [samplers/hmc-vector.js:238](https://github.com/tangent-to/mc/blob/63fcea62eb3faf619a906a8594f421e2a1c9c93b/src/samplers/hmc-vector.js#L238)
 
 ArviZ-style posterior summary across one or more chains.
 
