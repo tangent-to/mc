@@ -141,13 +141,30 @@ export class Model {
    * The value and gradient share one evaluation, so the sampler's
    * value-and-gradient path sweeps the data once rather than twice.
    *
+   * The tape is COMPILED by default: built once and replayed at each new set of
+   * parameters, rather than reconstructed per call. That is worth roughly 6x on
+   * a real model, and it is safe here because of the contract above. `fn`
+   * builds an expression out of grad's ops, so its graph is fixed by the way it
+   * is written; and a sampler holds every parameter's shape constant for the
+   * length of a run, so nothing can change underneath the plan.
+   *
+   * Stepping outside that contract breaks the assumption, and the two ways to
+   * do it both take deliberate effort: branching on a parameter's numeric value
+   * by reaching into `.data`, so different draws take different paths through
+   * `fn`, or closing over data that is mutated while the sampler runs. Neither
+   * is an expression built from ops, which is why the default is what it is.
+   * Pass `{ compile: false }` if you need one of them.
+   *
    * @param {string} name - Identifier for the term
    * @param {(params: Object) => Object} fn - Builds the log-density as a grad
    *   expression; receives the free variables as grad `Var`s keyed by name
+   * @param {Object} [options]
+   * @param {boolean} [options.compile=true] - reuse the tape across calls
    * @returns {Model} this
    */
-  autoPotential(name, fn) {
-    const { value, gradient } = valueAndGradFns(fn);
+  autoPotential(name, fn, options = {}) {
+    const { compile = true } = options;
+    const { value, gradient } = valueAndGradFns(fn, { compile });
     return this.potential(name, value, gradient);
   }
 

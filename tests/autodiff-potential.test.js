@@ -7,9 +7,11 @@
  * differences only approach to ~1e-7.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
 import { Model } from '../src/model.js';
+import { NUTS } from '../src/samplers/nuts.js';
+import { setRandomSeed } from '../src/rng.js';
 import { Normal } from '../src/distributions/normal.js';
 import { HalfNormal } from '../src/distributions/halfnormal.js';
 
@@ -136,5 +138,88 @@ describe('autoPotential', () => {
     const g = m.gradientsOnly(AT);
     const g0 = base.gradientsOnly(AT);
     expect(g.slope - g0.slope).toBeCloseTo(-AT.slope, 5);
+  });
+});
+
+describe('autoPotential compiles the tape by default', () => {
+  // The graph a grad expression describes is fixed by the way it is written,
+  // and a sampler holds every shape constant for the length of a run, so the
+  // tape can be built once and replayed. These tests are about that being
+  // invisible: same numbers, only faster.
+
+  const points = [
+    { slope: 2.1, intercept: 1.3, sigma: 0.4 },
+    { slope: -0.7, intercept: 4.0, sigma: 1.8 },
+    { slope: 0.05, intercept: -2.2, sigma: 0.25 },
+  ];
+
+  const build = (options) => {
+    const m = withPriors(new Model());
+    m.autoPotential('y', logLik, options);
+    return m;
+  };
+
+  it('gives the same log-probability and gradient as rebuilding each call', () => {
+    const compiled = build({});
+    const rebuilt = build({ compile: false });
+    for (const p of points) {
+      expect(compiled.logProb(p)).toBeCloseTo(rebuilt.logProb(p), 12);
+      const a = compiled.gradientsOnly(p);
+      const b = rebuilt.gradientsOnly(p);
+      for (const k of Object.keys(b)) expect(a[k]).toBeCloseTo(b[k], 10);
+    }
+  });
+
+  it('still reaches the hand-derived gradient', () => {
+    // The reference the uncompiled path is held to, applied to the compiled one:
+    // a replay that drifted would show up here and nowhere else.
+    const m = build({});
+    const priorsOnly = withPriors(new Model()).gradientsOnly(AT);
+    const full = m.gradientsOnly(AT);
+    const ref = handDerived(AT);
+    for (const k of Object.keys(ref)) {
+      expect(full[k] - priorsOnly[k]).toBeCloseTo(ref[k], 9);
+    }
+  });
+
+  it('builds the expression once, not once per evaluation', () => {
+    // The mechanism itself. Uncompiled, `fn` runs on every new set of
+    // parameters; compiled, it runs only to lay down the plan.
+    const spy = vi.fn(logLik);
+    const compiled = withPriors(new Model()).autoPotential('y', spy, {});
+    for (const p of points) compiled.gradientsOnly(p);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    const spy2 = vi.fn(logLik);
+    const rebuilt = withPriors(new Model()).autoPotential('y', spy2, { compile: false });
+    for (const p of points) rebuilt.gradientsOnly(p);
+    expect(spy2).toHaveBeenCalledTimes(points.length);
+  });
+
+  it('still reports a non-finite density outside the support, without poisoning the plan', () => {
+    // A sampler steps past sigma = 0, reads back a rejection, and carries on at
+    // the next in-support point. A replayed tape has to survive that round trip
+    // rather than latch the non-finite values into its buffers.
+    const m = build({});
+    expect(Number.isFinite(m.logProbAndGradient({ ...AT, sigma: -0.5 }).logProb)).toBe(false);
+    expect(m.logProb(AT)).toBeCloseTo(build({ compile: false }).logProb(AT), 12);
+  });
+
+  it('draws the same posterior as the uncompiled path', () => {
+    // The end-to-end claim. Same seed, same trajectory: a compiled tape has to
+    // reproduce the chain draw for draw, not merely land on the same posterior.
+    const draw = (options) => {
+      setRandomSeed(11);
+      return new NUTS({ stepSize: 0.05 }).sample(
+        build(options), { slope: 1, intercept: 1, sigma: 1 },
+        { nSamples: 200, nWarmup: 100 },
+      );
+    };
+    const a = draw({});
+    const b = draw({ compile: false });
+    for (const k of ['slope', 'intercept', 'sigma']) {
+      expect(a.trace[k].length).toBe(b.trace[k].length);
+      a.trace[k].forEach((v, i) => expect(v).toBeCloseTo(b.trace[k][i], 10));
+    }
   });
 });
