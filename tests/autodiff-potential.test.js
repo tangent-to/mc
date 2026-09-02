@@ -9,6 +9,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
+import { ops } from '../src/index.js';
+import { chainToolkit } from '../src/parallel.js';
 import { Model } from '../src/model.js';
 import { NUTS } from '../src/samplers/nuts.js';
 import { setRandomSeed } from '../src/rng.js';
@@ -221,5 +223,32 @@ describe('autoPotential compiles the tape by default', () => {
       expect(a.trace[k].length).toBe(b.trace[k].length);
       a.trace[k].forEach((v, i) => expect(v).toBeCloseTo(b.trace[k][i], 10));
     }
+  });
+});
+
+describe('mc.ops', () => {
+  // The ops are re-exported so a model never needs a second import of
+  // @tangent.to/grad. That import is a correctness hazard rather than a
+  // stylistic one: it loads a second copy of the module as soon as mc's own
+  // dependency range resolves elsewhere, and autoPotential rejects an
+  // expression whose Var came from the other copy.
+  it('is the same namespace the worker toolkit hands a model factory', () => {
+    expect(ops).toBe(chainToolkit.ops);
+  });
+
+  it('builds a potential that autoPotential accepts', () => {
+    const m = withPriors(new Model());
+    m.autoPotential('y', (p) => {
+      const resid = ops.sub(Y, ops.add(ops.mul(p.slope, X), p.intercept));
+      const core = ops.sub(
+        ops.mul(-0.5, ops.sum(ops.square(ops.div(resid, p.sigma)))),
+        ops.mul(N, ops.log(p.sigma)),
+      );
+      return ops.sub(core, HALF_N_LOG_2PI);
+    });
+    const priorsOnly = withPriors(new Model()).gradientsOnly(AT);
+    const full = m.gradientsOnly(AT);
+    const ref = handDerived(AT);
+    for (const k of Object.keys(ref)) expect(full[k] - priorsOnly[k]).toBeCloseTo(ref[k], 9);
   });
 });

@@ -30,6 +30,20 @@ import { Model } from './model.js';
 import { sampleChains, __runChain } from './parallel.js';
 export { sampleChains, __runChain };
 
+// grad's operations, so a model written with autoPotential can reach them
+// without importing @tangent.to/grad separately. That second import is not a
+// convenience question: it loads a SECOND copy of the module as soon as mc's
+// own dependency range resolves to a different version than the one pinned
+// alongside it, and the two copies have different Var classes, so
+// autoPotential's `instanceof` check rejects an expression built with the
+// other one. Reaching them through mc guarantees one copy.
+//
+// This is the same namespace the model factory receives as `mc.ops` inside a
+// worker, so a model reads identically whether its chains run in workers or on
+// the calling thread.
+import * as ops from '@tangent.to/grad';
+export { ops };
+
 import {
   Distribution,
   Normal,
@@ -171,6 +185,7 @@ export default {
   setRandomSeed,
   getRng,
   sampleChains,
+  ops,
   distributions,
   samplers,
   diagnostics,

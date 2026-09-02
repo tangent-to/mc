@@ -466,7 +466,7 @@ places, in descending order of preference:
   derivation by hand:
 
   ```javascript
-  import { add, div, log, mul, square, sub, sum } from '@tangent.to/grad';
+  const { add, div, log, mul, square, sub, sum } = mc.ops;
 
   model.autoPotential('y', (v) => {
     const z = div(sub(yData, add(mul(v.beta, xData), v.alpha)), v.sigma);
@@ -482,6 +482,13 @@ places, in descending order of preference:
   graph, and a sampler holds every parameter's shape constant for the length of
   a run. Pass `{ compile: false }` if you step outside that, by branching on a
   parameter's numeric value or closing over data that mutates mid-run.
+
+  The operations come from `mc.ops` rather than a separate import of
+  `@tangent.to/grad`. That second import is a correctness hazard, not a matter
+  of taste: it loads a second copy of the module as soon as mc's own dependency
+  range resolves to a different version than the one pinned beside it, and the
+  two copies have different `Var` classes, so `autoPotential` rejects an
+  expression built with the other one.
 
   Models written this way run in parallel like any other. `sampleChains` sends
   the factory's source to each worker, where it can reference nothing but its
