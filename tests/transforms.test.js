@@ -196,3 +196,49 @@ describe('NUTS through the transform', () => {
     expect(sd(out.trace.sigma)).toBeGreaterThan(0.05);
   });
 });
+
+describe('every gradient sampler moves through the unconstrained space', () => {
+  // Only NUTS did until 0.10. A HalfNormal scale stepped through directly by
+  // leapfrog walks past zero, where the density is -Infinity; through the
+  // transform it never can. So the test is that no draw of the scale is ever
+  // outside its support, and the posterior is still the right one.
+  const ys = [1.9, 2.4, 2.1, 1.7, 2.6, 2.2, 1.8, 2.3, 2.0, 2.5, 1.6, 2.7];
+  const build = () => {
+    const m = new Model();
+    m.addVariable('mu', new Normal(0, 10));
+    m.addVariable('sigma', new HalfNormal(2));
+    m.observe('y', (v) => new Normal(v.mu, v.sigma), ys);
+    return m;
+  };
+  const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+
+  it('HamiltonianMC', async () => {
+    const { HamiltonianMC } = await import('../src/samplers/hmc.js');
+    const { setRandomSeed } = await import('../src/rng.js');
+    setRandomSeed(2);
+    // A fixed-step sampler needs a start it can move from; what is under test
+    // is that the scale, once moving, never crosses zero.
+    const fit = new HamiltonianMC({ stepSize: 0.02, nSteps: 15 }).sample(build(), { mu: 1, sigma: 0.5 }, { nSamples: 600, nWarmup: 300 });
+    expect(Math.min(...fit.trace.sigma)).toBeGreaterThan(0);
+    expect(mean(fit.trace.mu)).toBeCloseTo(2.15, 0);
+    expect(fit.acceptanceRate).toBeGreaterThan(0.5);
+  });
+
+  it('the vector HMC', async () => {
+    const { HMC } = await import('../src/samplers/hmc-vector.js');
+    const { setRandomSeed } = await import('../src/rng.js');
+    setRandomSeed(2);
+    const fit = new HMC({ stepSize: 0.05, nSteps: 10 }).sample(build(), { mu: 0, sigma: 0.05 }, { nSamples: 400, nWarmup: 200 });
+    expect(Math.min(...fit.trace.sigma)).toBeGreaterThan(0);
+    expect(mean(fit.trace.mu)).toBeCloseTo(2.15, 0);
+  });
+
+  it('and records the draws on the natural scale, not the transformed one', () => {
+    const { setRandomSeed } = require('../src/rng.js');
+    setRandomSeed(2);
+    const fit = new NUTS({ stepSize: 0.05 }).sample(build(), { mu: 0, sigma: 1 }, { nSamples: 200, nWarmup: 200 });
+    // sigma's posterior sits near the sample SD, 0.35; a log-scale trace would sit near -1.
+    expect(mean(fit.trace.sigma)).toBeCloseTo(0.35, 0);
+    expect(Math.min(...fit.trace.sigma)).toBeGreaterThan(0);
+  });
+});

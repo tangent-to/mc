@@ -1,5 +1,6 @@
 import { isOptions } from '../distributions/base.js';
 import { sampleModelChains } from '../parallel.js';
+import { unconstrainedView } from '../transforms.js';
 import { getRng } from '../rng.js';
 import { axpy, computeHamiltonian, initTrace, kineticEnergy, recordSample, sampleMomentum } from './_shared.js';
 
@@ -139,10 +140,17 @@ export class HamiltonianMC {
    * @example
    * hmc.sample(model, { mu: 0 }, { nSamples: 1000, burnIn: 500, thin: 1 })
    */
-  sample(model, initialValues, nSamples = 1000, burnIn = 500, thin = 1) {
+  sample(userModel, userInitialValues, nSamples = 1000, burnIn = 500, thin = 1) {
     if (isOptions(nSamples) && nSamples.chains > 1) {
-      return sampleModelChains(model, initialValues, nSamples, 'hamiltonian', this.getParams());
+      return sampleModelChains(userModel, userInitialValues, nSamples, 'hamiltonian', this.getParams());
     }
+    // Move through the unconstrained parameterization, as NUTS does: a scale
+    // in (0, inf) is stepped through log-scale with the Jacobian applied, so
+    // leapfrog never walks it past its boundary. The view is the model itself
+    // when nothing is bounded.
+    const model = unconstrainedView(userModel);
+    const transformed = model !== userModel;
+    const initialValues = transformed ? model.toUnconstrained(userInitialValues) : userInitialValues;
     let verbose = false;
     if (isOptions(nSamples)) {
       const o = nSamples;
@@ -212,7 +220,7 @@ export class HamiltonianMC {
 
       // Store samples after burn-in and according to thinning
       if (i >= burnIn && (i - burnIn) % thin === 0) {
-        recordSample(trace, currentParams, variableNames);
+        recordSample(trace, transformed ? model.toConstrained(currentParams) : currentParams, variableNames);
       }
 
       // Progress logging

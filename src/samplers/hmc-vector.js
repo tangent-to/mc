@@ -1,4 +1,5 @@
 import { getRng, setRandomSeed } from '../rng.js';
+import { unconstrainedView } from '../transforms.js';
 import { effectiveSampleSize, gelmanRubin } from '../utils/trace.js';
 
 /**
@@ -50,7 +51,12 @@ export class HMC {
    * @returns {{ trace: Object, acceptanceRate: number, stepSize: number,
    *            divergences: number, specs: Array }}
    */
-  sample(model, initialValues, { nSamples = 1000, nWarmup = 500, thin = 1, progress = false } = {}) {
+  sample(userModel, userInitialValues, { nSamples = 1000, nWarmup = 500, thin = 1, progress = false } = {}) {
+    // Move through the unconstrained parameterization, as NUTS and
+    // HamiltonianMC do. The view is the model itself when nothing is bounded.
+    const model = unconstrainedView(userModel);
+    const transformed = model !== userModel;
+    const initialValues = transformed ? model.toUnconstrained(userInitialValues) : userInitialValues;
     const names = model.getFreeVariableNames().filter((n) => initialValues[n] !== undefined);
     // Layout: flatten scalars and 1-D arrays into a single vector.
     const specs = names.map((name) => {
@@ -169,7 +175,8 @@ export class HMC {
 
       if (i >= nWarmup && (i - nWarmup) % thin === 0) {
         const dict = unflatten(q);
-        for (const n of names) trace[n].push(dict[n]);
+        const recorded = transformed ? model.toConstrained(dict) : dict;
+        for (const n of names) trace[n].push(recorded[n]);
       }
       if (progress && (i + 1) % Math.max(1, Math.floor(total / 10)) === 0) {
         const phase = i < nWarmup ? 'warmup' : 'sample';
