@@ -24,6 +24,7 @@
  */
 
 import { valueAndGradFns } from '@tangent.to/grad';
+import { Distribution } from './distributions/base.js';
 import { makeTransform, supportOf } from './transforms.js';
 
 /** Sum a number or an array of numbers. */
@@ -63,6 +64,13 @@ export class Model {
     this.potentials = new Map(); // Generic log-density terms (factors / likelihoods)
     this.potentialGrads = new Map(); // Optional analytic gradients for potentials
     this.deterministics = new Map(); // Named transforms recorded in the trace
+    // Terms that exist as compiled grad plans, by name: what can be written
+    // out as data and sent to a worker. Filled by autoPotential and observe.
+    this.compiledTerms = new Map();
+    // observe() terms, name -> data. Kept apart from observedVars, which is
+    // keyed by VARIABLE name and read when deciding which variables to
+    // transform; an observed term is a potential, not a variable.
+    this.observedTerms = new Map();
   }
 
   /**
@@ -172,8 +180,62 @@ export class Model {
    */
   autoPotential(name, fn, options = {}) {
     const { compile = true } = options;
-    const { value, gradient } = valueAndGradFns(fn, { compile });
-    return this.potential(name, value, gradient);
+    const fns = valueAndGradFns(fn, { compile });
+    if (compile) this.compiledTerms.set(name, fns.compiled);
+    else this.compiledTerms.delete(name);
+    return this.potential(name, fns.value, fns.gradient);
+  }
+
+  /**
+   * Declare an observed random variable: the likelihood, derived from a
+   * distribution instead of written out.
+   *
+   * `factory` receives the free variables as grad `Var`s and returns a
+   * distribution whose parameters are expressions in them. The term added to
+   * the model is that distribution's `logDensity` at `observed`, differentiated
+   * exactly and compiled, so this is {@link Model#autoPotential} with the
+   * density supplied by the distribution rather than by you. What that
+   * removes from a model is everything a PyMC user never writes: the kernel,
+   * the `-n log sigma`, the normalizing constant.
+   *
+   * ```js
+   * const { add, mul } = mc.ops;
+   * model.addVariable('a', new Normal(0, 5));
+   * model.addVariable('b', new Normal(0, 5));
+   * model.addVariable('sigma', new HalfNormal(2));
+   * model.observe('y', (v) => new Normal(add(v.a, mul(v.b, xData)), v.sigma), yData);
+   * ```
+   *
+   * The seven built-in distributions can be observed. A user-defined one
+   * cannot be differentiated and is refused here; write its term with
+   * `autoPotential`.
+   *
+   * @param {string} name - Identifier for the term
+   * @param {(v: Object) => Distribution} factory - Builds the observation
+   *   distribution from the free variables
+   * @param {number|Array} observed - The data
+   * @param {Object} [options] - As for {@link Model#autoPotential}
+   * @returns {Model} this
+   */
+  observe(name, factory, observed, options = {}) {
+    if (typeof factory !== 'function') {
+      throw new Error(`observe("${name}"): expected a function returning a distribution`);
+    }
+    if (observed === undefined || observed === null) {
+      throw new Error(`observe("${name}"): observed data is required`);
+    }
+    const term = (v) => {
+      const dist = factory(v);
+      if (!(dist instanceof Distribution)) {
+        throw new Error(
+          `observe("${name}"): the factory must return one of mc's distributions, got ` +
+            `${dist === null ? 'null' : typeof dist}`,
+        );
+      }
+      return dist.logDensity(observed);
+    };
+    this.observedTerms.set(name, observed);
+    return this.autoPotential(name, term, options);
   }
 
   /**
