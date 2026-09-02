@@ -20,30 +20,29 @@ plain JavaScript arrays.
 
 ## Bayesian linear regression
 
-Recover a slope, intercept, and noise scale from noisy `(x, y)` pairs. The likelihood
-is attached with `potential`, and the gradient-based vector `HMC` sampler does the
-fitting.
+Recover a slope, intercept, and noise scale from noisy `(x, y)` pairs. The
+observation model is declared with `observe`, and NUTS runs four chains.
 
 ```javascript
-import { Model, Normal, HalfNormal, HMC, summary, tf } from '@tangent.to/mc';
+import mc, { Model, Normal, HalfNormal, NUTS, summary } from '@tangent.to/mc';
+const { add, mul } = mc.ops;
 
 const x = [0, 1, 2, 3, 4, 5, 6, 7];
 const y = [1.1, 2.8, 5.2, 6.9, 9.1, 11.0, 12.8, 15.2];
 
 const model = new Model('linear_regression');
-model.addVariable('alpha', new Normal({ mean: 0, sd: 10, name: 'alpha' }));
-model.addVariable('beta',  new Normal({ mean: 0, sd: 10, name: 'beta' }));
-model.addVariable('sigma', new HalfNormal(5, 'sigma'));
+model.addVariable('alpha', new Normal(0, 10));
+model.addVariable('beta',  new Normal(0, 10));
+model.addVariable('sigma', new HalfNormal(5));
 
-// Distributions broadcast over arrays, so the mean is one map and the
-// log-density is one call.
-model.potential('y', (p) =>
-  new Normal(x.map((xi) => p.alpha + p.beta * xi), p.sigma).logProb(y));
+// y ~ Normal(alpha + beta * x, sigma). The mean is an expression in the
+// parameters; the likelihood and its gradient come from the Normal.
+model.observe('y', (v) => new Normal(add(v.alpha, mul(v.beta, x)), v.sigma), y);
 
-const result = new HMC({ stepSize: 0.01, nSteps: 20 })
-  .sample(model, { alpha: 0, beta: 0, sigma: 1 }, { nSamples: 1000, nWarmup: 500 });
+const fit = await new NUTS()
+  .sample(model, { alpha: 0, beta: 0, sigma: 1 }, { chains: 4, nSamples: 1000, nWarmup: 500 });
 
-console.table(summary(result));   // alpha ~ 1, beta ~ 2, sigma ~ 0.5
+console.table(summary(fit.chains));   // alpha ~ 1, beta ~ 2, sigma ~ 0.25, with rhat
 ```
 
 ### Posterior predictions
@@ -62,31 +61,28 @@ const pred = model.predictPosteriorSummary(
 
 ## Logistic regression
 
-Binary classification: model `P(y = 1) = sigmoid(alpha + beta * x)` with a Bernoulli
-likelihood. The log-probability is computed directly through `tf` inside the
-potential so the sampler can differentiate it.
+Binary classification: `P(y = 1) = sigmoid(alpha + beta * x)` with a Bernoulli
+likelihood. The probability is an expression, so the Bernoulli's log-density and
+its gradient follow from it.
 
 ```javascript
-import { Model, Normal, HMC, summary, tf } from '@tangent.to/mc';
+import mc, { Model, Normal, Bernoulli, NUTS, summary } from '@tangent.to/mc';
+const { add, mul, sigmoid } = mc.ops;
 
 const x = [-2, -1, -0.5, 0, 0.5, 1, 2, 3];
 const y = [0, 0, 0, 0, 1, 1, 1, 1];   // labels in {0, 1}
 
 const model = new Model('logistic_regression');
-model.addVariable('alpha', new Normal({ mean: 0, sd: 5, name: 'alpha' }));
-model.addVariable('beta',  new Normal({ mean: 0, sd: 5, name: 'beta' }));
+model.addVariable('alpha', new Normal(0, 5));
+model.addVariable('beta',  new Normal(0, 5));
 
 // y ~ Bernoulli(sigmoid(alpha + beta * x)).
-model.potential('y', (p) => {
-  const prob = x.map((xi) => 1 / (1 + Math.exp(-(p.alpha + p.beta * xi))));
-  // log p = y*log(prob) + (1 - y)*log(1 - prob)
-  return y.map((yi, i) => yi * Math.log(prob[i]) + (1 - yi) * Math.log(1 - prob[i]));
-});
+model.observe('y', (v) => new Bernoulli(sigmoid(add(v.alpha, mul(v.beta, x)))), y);
 
-const result = new HMC({ stepSize: 0.05, nSteps: 20 })
-  .sample(model, { alpha: 0, beta: 0 }, { nSamples: 1000, nWarmup: 500 });
+const fit = await new NUTS()
+  .sample(model, { alpha: 0, beta: 0 }, { chains: 4, nSamples: 1000, nWarmup: 500 });
 
-console.table(summary(result));
+console.table(summary(fit.chains));
 ```
 
 A positive posterior mean for `beta` confirms the probability of class 1 rises with
@@ -95,11 +91,14 @@ A positive posterior mean for `beta` confirms the probability of class 1 rises w
 ## Hierarchical model
 
 Partial pooling across groups: each group has its own mean drawn from a shared
-population distribution. The vector-aware `HMC` sampler flattens the per-group vector
-`theta` together with the scalar hyperparameters and samples them jointly.
+population distribution. The group-level prior is a distribution whose parameters
+are themselves variables, so it is written with `autoPotential` and the
+distribution's `logDensity`; the observations are attached with `observe` through
+a one-hot group matrix.
 
 ```javascript
-import { Model, Normal, HalfNormal, HMC, summary, tf } from '@tangent.to/mc';
+import mc, { Model, Normal, HalfNormal, NUTS, summary } from '@tangent.to/mc';
+const { matmul } = mc.ops;
 
 // Three groups, a few observations each.
 const groups = [
@@ -108,50 +107,45 @@ const groups = [
   { id: 2, obs: [3.9, 4.2, 4.0] },
 ];
 const nGroups = groups.length;
+// Every observation in one vector, and a one-hot row per observation picking
+// its group's mean: matmul(G, theta) is then the vector of means.
+const obs = groups.flatMap((g) => g.obs);
+const G = groups.flatMap((g) => g.obs.map(() => groups.map((h) => (h.id === g.id ? 1 : 0))));
 
 const model = new Model('hierarchical');
 
 // Hyperpriors for the population of group means.
-model.addVariable('muPop',    new Normal({ mean: 5, sd: 10, name: 'muPop' }));
-model.addVariable('sigmaPop', new HalfNormal(5, 'sigmaPop'));
-// Per-group means as a vector variable.
-model.addVariable('theta',    new Normal({ mean: 5, sd: 10, name: 'theta' }));
+model.addVariable('muPop',    new Normal(5, 10));
+model.addVariable('sigmaPop', new HalfNormal(5));
+// Per-group means as a vector variable, under a wide base prior.
+model.addVariable('theta',    new Normal(new Array(nGroups).fill(5), 10));
 
-// Group-level prior: theta[g] ~ Normal(muPop, sigmaPop)
-model.potential('group_prior', (p) =>
-  new Normal(p.muPop, p.sigmaPop).logProb(p.theta));
+// Group-level prior: theta[g] ~ Normal(muPop, sigmaPop). A distribution's
+// logDensity accepts expressions for its parameters and for its value.
+model.autoPotential('group_prior', (v) =>
+  new Normal(v.muPop, v.sigmaPop).logDensity(v.theta));
 
-// Likelihood: obs in group g ~ Normal(theta[g], 1)
-model.potential('y', (p) => {
-  let lp = 0;
-  for (const g of groups) {
-    for (const v of new Normal(p.theta[g.id], 1).logProb(g.obs)) lp += v;
-  }
-  return lp;
-});
+// Observations: obs in group g ~ Normal(theta[g], 1)
+model.observe('y', (v) => new Normal(matmul(G, v.theta), 1), obs);
 
-const result = new HMC({ stepSize: 0.02, nSteps: 25 }).sample(
-  model,
-  { muPop: 5, sigmaPop: 1, theta: new Array(nGroups).fill(5) },
-  { nSamples: 1000, nWarmup: 500 }
-);
-
-// `summary` expands the vector `theta` into theta[0], theta[1], theta[2] rows.
-console.table(summary(result));
-```
-
-### Multiple chains and convergence
-
-Run several chains and pass them all to `summary` so it reports R-hat across chains:
-
-```javascript
-const chains = new HMC({ stepSize: 0.02, nSteps: 25 }).sampleChains(
+const fit = await new NUTS().sample(
   model,
   { muPop: 5, sigmaPop: 1, theta: new Array(nGroups).fill(5) },
   { chains: 4, nSamples: 1000, nWarmup: 500 }
 );
-console.table(summary(chains));   // each row now includes an rhat column
+
+// `summary` expands the vector `theta` into theta[0], theta[1], theta[2] rows,
+// and reports R-hat across the four chains.
+console.table(summary(fit.chains));
 ```
+
+### Where the chains run
+
+Every model above ran its chains on worker threads, one per chain, with nothing
+written to make that happen: a model built from `addVariable`, `observe` and
+`autoPotential` can be sent to a worker as data. `fit.parallel` says whether that
+happened, and `fit.parallelReason` says why not when it did not, for instance in a
+runtime that cannot start a worker. The draws are identical in both cases.
 
 ## Visualizing a trace
 
