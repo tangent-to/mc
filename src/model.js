@@ -132,6 +132,14 @@ export class Model {
    * });
    * ```
    *
+   * `add` and `mul` take any number of operands, which is what keeps a mean
+   * with several terms readable. JavaScript cannot overload `+`, so this is as
+   * close as the language gets to PyMC's `mu0 + tau * z + gamma`:
+   *
+   * ```js
+   * const mu = add(v.mu0, mul(tau, matmul(Z, v.z)), matmul(C, v.cyc));
+   * ```
+   *
    * Against the finite-difference fallback on a 21-parameter regression with
    * 300 observations: one likelihood evaluation per gradient instead of 2·P,
    * NUTS 7.7× faster end to end, and the same posterior. The gradient matches
