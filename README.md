@@ -17,6 +17,8 @@ MC follows the same API conventions as its sibling data-science package [`@tange
 ### Key Features
 
 - **PyMC-like DAG structure**: Define models by connecting distributions in a directed acyclic graph
+- **Observed variables**: `model.observe(name, (v) => new Normal(mean(v), v.sigma), data)` derives the likelihood, and its exact gradient, from the distribution
+- **Chains where they fit**: `sample(model, init, { chains: 4 })` runs on worker threads when the runtime and the model allow it, on the calling thread otherwise, with the same draws either way
 - **Exact gradients**: analytic log-density derivatives from [`@tangent.to/proba`](https://github.com/tangent-to/proba), and reverse-mode autodiff from [`@tangent.to/grad`](https://github.com/tangent-to/grad) for likelihoods you write yourself
 - **Multiple MCMC samplers**: Metropolis-Hastings, Hamiltonian Monte Carlo, and the No-U-Turn Sampler (NUTS)
 - **Rich distribution library**: Normal, Uniform, Beta, Gamma, Bernoulli, and more
@@ -83,37 +85,42 @@ import { Model, Normal, MetropolisHastings } from '@tangent.to/mc';
 Here's a simple Bayesian linear regression example:
 
 ```javascript
-import { Model, Normal, Uniform, MetropolisHastings, printSummary } from '@tangent.to/mc';
+import mc, { Model, Normal, HalfNormal, NUTS, printSummary } from '@tangent.to/mc';
+const { add, mul } = mc.ops;
 
 // Example data - plain arrays, no tensors
 const x = [1, 2, 3, 4, 5];
 const y = [2.1, 3.9, 6.2, 7.8, 10.1];
 
-// Create the model and its priors (options-object form; positional also works).
-const model = new Model({ name: 'linear_regression' });
-model.addVariable('alpha', new Normal({ mean: 0, sd: 10 }));
-model.addVariable('beta',  new Normal({ mean: 0, sd: 10 }));
-model.addVariable('sigma', new Uniform({ min: 0.01, max: 5 }));
+// Priors, on their natural scale: sigma is a HalfNormal and the sampler
+// handles the transform.
+const model = new Model('linear_regression');
+model.addVariable('alpha', new Normal(0, 10));
+model.addVariable('beta',  new Normal(0, 10));
+model.addVariable('sigma', new HalfNormal(5));
 
-// Likelihood as a POTENTIAL. The priors above are summed into the joint
-// automatically; `potential(name, fn)` adds the data term, with the deterministic
-// mean built from the latent parameters. Distributions broadcast over arrays, so
-// this is one vectorized call, not a loop.
-model.potential('y', (p) =>
-  new Normal(x.map((xi) => p.beta * xi + p.alpha), p.sigma).logProb(y));
+// The observation model. The mean is an expression in the parameters; the
+// likelihood, and its exact gradient, are derived from the Normal.
+model.observe('y', (v) => new Normal(add(v.alpha, mul(v.beta, x)), v.sigma), y);
 
-// For a gradient-based sampler, write the same term with `autoPotential` instead
-// and it is differentiated exactly - see "Gradients" below.
+// Four chains. mc runs them on worker threads where it can, in series where it
+// cannot, with the same draws either way.
+const fit = await new NUTS().sample(model, { alpha: 0, beta: 0, sigma: 1 },
+  { chains: 4, nSamples: 1000, nWarmup: 500 });
 
-// (Optional) record a post-hoc transform of the draws into the trace:
-// model.deterministic('mu_at_x3', (p) => p.alpha + p.beta * 3);
-
-// Run MCMC (options-object form; positional args also work).
-const sampler = new MetropolisHastings({ proposalStd: 0.5 });
-const trace = sampler.sample(model, { alpha: 0, beta: 0, sigma: 1 }, { nSamples: 1000, burnIn: 500, thin: 1 });
-
-printSummary(trace);
+printSummary(fit.trace);
 ```
+
+That is the whole model. There is no log-density written out, no Jacobian for
+`sigma`, and no loop over chains. The one trace of JavaScript in it is that
+`alpha + beta * x` has to be written as a call, because the language cannot
+overload `+` on an object; `add` and `mul` take any number of operands so that
+nothing nests.
+
+The lower-level forms remain. `model.potential(name, fn)` adds a term as a
+plain function of the parameters, differentiated by finite differences;
+`model.autoPotential(name, fn)` adds one written in grad's ops, differentiated
+exactly, for a likelihood no distribution supplies. See "Gradients" below.
 
 ### Namespaced / default imports
 
@@ -457,10 +464,16 @@ mc = import("https://cdn.jsdelivr.net/npm/@tangent.to/mc/+esm")
 
 ### Gradients
 
-HMC and NUTS need the gradient of the joint log-probability. mc gets it from three
+HMC and NUTS need the gradient of the joint log-probability. mc gets it from four
 places, in descending order of preference:
 
 - **Priors** are differentiated analytically, from `@tangent.to/proba`'s `dlogpdf`.
+- **Observed variables, `model.observe(name, factory, data)`,** get their term from
+  the distribution: `factory(v)` returns a distribution whose parameters are
+  expressions in the free variables, and its `logDensity` at the data is added
+  as a compiled term. Every one of mc's seven distributions can be observed, a
+  Gamma or Beta with a differentiated shape parameter included, through grad's
+  `lgamma`. This is the form to reach for first; it is what the Quick Start uses.
 - **Potentials written with `autoPotential`** are differentiated exactly by
   [`@tangent.to/grad`](https://github.com/tangent-to/grad), reverse-mode, with no
   derivation by hand:
@@ -490,9 +503,20 @@ places, in descending order of preference:
   two copies have different `Var` classes, so `autoPotential` rejects an
   expression built with the other one.
 
-  Models written this way run in parallel like any other. `sampleChains` sends
-  the factory's source to each worker, where it can reference nothing but its
-  two arguments, so grad's ops arrive as `mc.ops`:
+  Models written this way run in parallel as they are, through
+  `sampler.sample(model, init, { chains: 4 })`. The model is serialized, its
+  variables as their distribution's kind and parameters and its terms as
+  compiled grad plans, and one worker per chain rebuilds it from that data; no
+  factory is written and nothing is threaded through by hand. When the model
+  holds a term that cannot travel, a `potential` over plain numbers, or the
+  runtime cannot start a worker, the chains run in series with the reason named
+  once, and `fit.parallel` and `fit.parallelReason` say which happened. The
+  draws are identical either way, since both paths derive the same per-chain
+  seeds.
+
+  `sampleChains` remains for the case that cannot be serialized and still wants
+  workers: it sends a factory's source to each worker, where it can reference
+  nothing but its two arguments, so grad's ops arrive as `mc.ops`:
 
   ```javascript
   await sampleChains((data, mc) => {
