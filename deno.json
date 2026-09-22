@@ -5,10 +5,6 @@
     ".": "./src/index.js",
     "./persistence": "./src/utils/persistence.js"
   },
-  "imports": {
-    "@tangent.to/proba": "jsr:@tangent/proba@^0.2.0",
-    "@tangent.to/grad": "jsr:@tangent/grad@^0.3.0"
-  },
   "publish": {
     "exclude": [
       ".git",
