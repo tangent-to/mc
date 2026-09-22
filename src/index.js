@@ -52,7 +52,10 @@ import {
   Beta,
   Gamma,
   Lognormal,
-  HalfNormal
+  HalfNormal,
+  Exponential,
+  StudentT,
+  Poisson
 } from './distributions/index.js';
 
 import {
@@ -98,7 +101,10 @@ export {
   Beta,
   Gamma,
   Lognormal,
-  HalfNormal
+  HalfNormal,
+  Exponential,
+  StudentT,
+  Poisson
 };
 export { MetropolisHastings, HamiltonianMC, NUTS, HMC, summary };
 export {
@@ -133,7 +139,10 @@ export const distributions = {
   Beta,
   Gamma,
   Lognormal,
-  HalfNormal
+  HalfNormal,
+  Exponential,
+  StudentT,
+  Poisson
 };
 
 /**

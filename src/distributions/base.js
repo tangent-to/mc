@@ -10,7 +10,7 @@
 
 import { getRng } from '../rng.js';
 
-import { Var } from '@tangent.to/grad';
+import { sum, Var } from '@tangent.to/grad';
 
 /**
  * Determine whether the first constructor argument is an options object
@@ -125,18 +125,23 @@ export class Distribution {
    * parameter that is a `Var`. It is what `Model#observe` evaluates, so that a
    * likelihood is derived from the distribution rather than written by hand.
    *
-   * The seven built-in distributions implement it. A subclass that does not is
-   * still a valid prior and a valid `logProb`; it is simply not differentiable,
-   * and `observe` will say so.
+   * The formula is proba's: every proba distribution carries `logDensity`,
+   * the same density as `logpdf` written in grad ops, elementwise, and this
+   * sums it. A subclass wrapping a distribution that lacks it is still a
+   * valid prior and a valid `logProb`; it is simply not differentiable, and
+   * `observe` will say so.
    *
    * @param {number|Array} value - observed value(s), plain numbers
    * @returns {import('@tangent.to/grad').Var} scalar
    */
-  logDensity(_value) {
-    throw new Error(
-      `${this.name}: logDensity is not implemented, so this distribution cannot be ` +
-        'differentiated. Write the term with model.autoPotential instead.',
-    );
+  logDensity(value) {
+    if (!this._dist || typeof this._dist.logDensity !== 'function') {
+      throw new Error(
+        `${this.name}: logDensity is not implemented, so this distribution cannot be ` +
+          'differentiated. Write the term with model.autoPotential instead.',
+      );
+    }
+    return sum(this._dist.logDensity(value, this._params()));
   }
 
   /**

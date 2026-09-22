@@ -6,3 +6,6 @@ export { Beta } from './beta.js';
 export { Gamma } from './gamma.js';
 export { Lognormal } from './lognormal.js';
 export { HalfNormal } from './halfnormal.js';
+export { Exponential } from './exponential.js';
+export { StudentT } from './studentt.js';
+export { Poisson } from './poisson.js';

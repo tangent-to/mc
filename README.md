@@ -187,10 +187,13 @@ Each constructor accepts positional arguments or an options object (shown second
 - **Gamma**: `new Gamma(alpha, beta)` / `new Gamma({ shape, rate })` - Gamma distribution (for positive values)
 - **Lognormal**: `new Lognormal(mu, sigma)` / `new Lognormal({ mu, sigma })` - positive values (log-scale normal); a good prior for rates, scales, and plateaus
 - **HalfNormal**: `new HalfNormal(sigma)` / `new HalfNormal({ sigma })` - positive values concentrated near zero; a good prior for scale / standard-deviation parameters
+- **Exponential**: `new Exponential(lambda)` / `new Exponential({ rate })` - positive values, rate-parameterized
+- **StudentT**: `new StudentT(nu, mu, sigma)` / `new StudentT({ df, mean, sd })` - heavy-tailed; a robust observation model
 
 #### Discrete Distributions
 
 - **Bernoulli**: `new Bernoulli(p)` / `new Bernoulli({ p })` - Binary outcomes
+- **Poisson**: `new Poisson(lambda)` / `new Poisson({ rate })` - counts
 
 All distributions support:
 - `logProb(value)` - Compute log probability density/mass
@@ -610,9 +613,9 @@ builds on are MIT).
 - [x] Namespaced + flat + default exports and options-object constructors (aligned with `@tangent.to/ds`)
 - [x] Lognormal and HalfNormal distributions
 - [x] Post-hoc deterministics recorded into the trace
+- [x] Exponential, Student-t and Poisson distributions
 
 **Planned**:
-- [ ] Additional distributions (Poisson, Student-t, Exponential)
 - [ ] Variational inference (ADVI)
 - [ ] Model comparison utilities (WAIC, LOO)
 - [ ] Trace visualization tools

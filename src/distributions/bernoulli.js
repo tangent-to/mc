@@ -1,5 +1,4 @@
 import { bernoulli } from '@tangent.to/proba';
-import { add, log, mul, sub, sum } from '@tangent.to/grad';
 import { Distribution, isOptions } from './base.js';
 
 /**
@@ -29,11 +28,6 @@ export class Bernoulli extends Distribution {
    */
   _params() {
     return { p: this.p };
-  }
-
-  logDensity(value) {
-    // x log p + (1 - x) log(1 - p), x in {0, 1}.
-    return sum(add(mul(value, log(this.p)), mul(sub(1, value), log(sub(1, this.p)))));
   }
 
   /**

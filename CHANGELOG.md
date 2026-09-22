@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Exponential, StudentT and Poisson distributions**, as priors and as
+  observation models: `observe` differentiates them like the others. A
+  Student-t likelihood is the robust alternative to a Normal; a Poisson on an
+  `exp(...)` rate is a count model.
+
+### Changed
+
+- **The observation models derive from proba.** Every proba distribution now
+  carries `logDensity`, the log density as a grad expression, and mc's
+  `Distribution.logDensity` sums it; the seven hand-written bodies are gone
+  and there is one copy of each formula in the suite. Requires
+  `@tangent.to/proba` 0.2 and `@tangent.to/grad` 0.3.
+
 - **NUTS counts divergent transitions.** `sample()` returns `divergences`
   (after warmup, the count to act on) and `divergencesWarmup`, and warns once
   when the former is positive; a multi-chain run aggregates and warns once
