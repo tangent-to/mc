@@ -70,6 +70,8 @@ import {
   summarize,
   effectiveSampleSize,
   gelmanRubin,
+  rhat,
+  ess,
   printSummary,
   traceToJSON,
   traceToCSV
@@ -111,6 +113,8 @@ export {
   summarize,
   effectiveSampleSize,
   gelmanRubin,
+  rhat,
+  ess,
   printSummary,
   traceToJSON,
   traceToCSV
@@ -165,6 +169,8 @@ export const diagnostics = {
   summarize,
   effectiveSampleSize,
   gelmanRubin,
+  rhat,
+  ess,
   printSummary,
   traceToJSON,
   traceToCSV

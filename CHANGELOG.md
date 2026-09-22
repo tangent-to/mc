@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rank-normalized convergence diagnostics** (Vehtari et al. 2021, *Bayesian
+  Analysis* 16:667-718), the ones Stan and ArviZ report: `rhat(chains)`, the
+  rank-normalized split-R̂ (the larger of its bulk and folded versions), and
+  `ess(chains, { kind: 'bulk' | 'tail' })`, the bulk and tail effective sample
+  sizes. Exported flat and in `diagnostics`. They match ArviZ 0.20 on the
+  fixtures in `tests/fixtures/arviz-diagnostics.json`. `gelmanRubin` and
+  `effectiveSampleSize` are unchanged.
+
 - **Exponential, StudentT and Poisson distributions**, as priors and as
   observation models: `observe` differentiates them like the others. A
   Student-t likelihood is the robust alternative to a Normal; a Poisson on an

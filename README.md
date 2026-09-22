@@ -355,6 +355,19 @@ const ess = effectiveSampleSize(trace.trace.alpha);
 const rHat = gelmanRubin([chain1.alpha, chain2.alpha, chain3.alpha]);
 ```
 
+For reporting, prefer the rank-normalized diagnostics of Vehtari et al. (2021), the ones Stan and
+ArviZ report. They are robust to heavy tails and catch chains that differ in scale as well as in
+location. Pass them the per-chain draws, e.g. `fit.byChain.alpha` from `sampleChains`:
+
+```javascript
+import { rhat, ess } from '@tangent.to/mc';
+
+rhat(fit.byChain.alpha);                   // rank-normalized split-R-hat; < 1.01 when converged
+ess(fit.byChain.alpha);                    // bulk ESS, for means and medians
+ess(fit.byChain.alpha, { kind: 'tail' });  // tail ESS, for 5% and 95% quantiles
+// Both ESS should exceed 100 per chain.
+```
+
 ## Examples
 
 The `examples/` directory contains complete working examples:
@@ -609,7 +622,7 @@ builds on are MIT).
 - [x] Model persistence (save/load)
 - [x] Browser/Observable support
 - [x] No-U-Turn Sampler (NUTS) with dual-averaging step-size adaptation
-- [x] Convergence diagnostics (Gelman-Rubin R-hat, effective sample size)
+- [x] Convergence diagnostics (Gelman-Rubin R-hat, effective sample size; rank-normalized split-R-hat and bulk/tail ESS of Vehtari et al. 2021)
 - [x] Namespaced + flat + default exports and options-object constructors (aligned with `@tangent.to/ds`)
 - [x] Lognormal and HalfNormal distributions
 - [x] Post-hoc deterministics recorded into the trace
