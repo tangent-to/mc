@@ -49,7 +49,11 @@ describe('a model as data', () => {
     expect(json.variables.map((v) => [v.name, v.kind])).toEqual([['a', 'Normal'], ['b', 'Normal'], ['sigma', 'HalfNormal']]);
     expect(json.variables[2].params).toEqual({ sigma: 2 });
     expect(json.terms).toHaveLength(1);
-    expect(json.terms[0].plan.version).toBe(1);
+    // The plan's format is grad's to version, not mc's to pin: grad 0.3 writes
+    // version 2 (it added input leaves) and still reads 1. What matters here is
+    // that the term is a plan compileFromJSON accepts.
+    expect(json.terms[0].plan.version).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(json.terms[0].plan.nodes)).toBe(true);
   });
 
   it('needs a point to trace at', () => {
