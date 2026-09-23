@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Observed likelihoods could silently drop out in the browser.** jsdelivr
+  bundled mc 0.12.0 with grad 0.3.1 and proba 0.2.1 with grad 0.3.0, so a
+  browser loaded two copies of grad; proba read mc's Vars as constants, the
+  likelihood no longer depended on the parameters, and NUTS sampled the prior
+  with healthy R-hat and ESS. `Distribution.logDensity`, the one place where mc
+  hands its Vars to proba, now throws when the density comes back from another
+  copy of grad. grad and proba are pinned to exact versions (0.3.1, 0.2.2), and
+  `scripts/cdn-smoke.sh` checks a published release in a real browser.
+
 ### Added
 
 - **Rank-normalized convergence diagnostics** (Vehtari et al. 2021, *Bayesian

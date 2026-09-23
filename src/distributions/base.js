@@ -141,7 +141,21 @@ export class Distribution {
           'differentiated. Write the term with model.autoPotential instead.',
       );
     }
-    return sum(this._dist.logDensity(value, this._params()));
+    const params = this._params();
+    const density = this._dist.logDensity(value, params);
+    // This is the one place where mc hands its grad Vars to another package. proba builds the
+    // density with its own import of @tangent.to/grad; when that import is a different copy from
+    // mc's (a CDN pinning two grad versions), proba reads mc's Vars as constants and returns a
+    // density that does not depend on the parameters, and the sampler draws from the prior
+    // without any error. Refuse that instead.
+    if (Object.values(params).some((p) => p instanceof Var) && !(density instanceof Var)) {
+      throw new Error(
+        `${this.name}.logDensity: @tangent.to/proba built the density with a different copy of ` +
+          '@tangent.to/grad than mc, so the likelihood would not depend on the parameters. ' +
+          'Load a single copy of @tangent.to/grad: use the proba and grad versions mc was released with.',
+      );
+    }
+    return sum(density);
   }
 
   /**

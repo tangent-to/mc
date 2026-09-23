@@ -29,6 +29,25 @@ Pushing the `v*` tag runs the Release workflow, which publishes to npm and JSR.
 The npm job is idempotent — it skips a version already on the registry — so a
 failed JSR half can be re-run without a version collision.
 
+## After publishing: check the browser bundle
+
+Node and vitest resolve one copy of each dependency, so they cannot see what a
+browser notebook loads. jsdelivr bundles a release once, with the dependency
+versions that were newest at that moment, and two packages bundled at different
+times can bring two copies of `@tangent.to/grad`; the likelihood then silently
+drops out of every model (this broke 0.12.0). After every release, run:
+
+```bash
+scripts/cdn-smoke.sh <version>   # headless Chrome/Chromium; must print OK
+```
+
+## Releasing with grad or proba
+
+mc pins `@tangent.to/grad` and `@tangent.to/proba` to exact versions, and proba
+pins the same grad. When grad changes, release in this order and let each land
+on npm before the next: grad, then proba (pinning the new grad), then mc
+(pinning both). Then run `scripts/cdn-smoke.sh`.
+
 ## Notes
 
 - Version lives in exactly two files, kept in lockstep: `package.json` (source of
